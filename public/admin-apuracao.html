@@ -492,13 +492,12 @@ function renderCategorias() {
   $('nada').hidden = visiveis.length > 0;
 }
 
-// Ano atual com o status dele; anos anteriores (encerrados e já trocados por "Começar novo ano")
-// sempre como "Votação encerrada". Mais recente primeiro.
-const STATUS_ANO = { aberta: 'Ao vivo', encerrada: 'Votação encerrada', fechada: 'Não abriu' };
+// Só o ano no seletor (o status aparece ao lado). Ano atual + anos anteriores
+// (encerrados e já trocados por "Começar novo ano"), mais recente primeiro.
 function renderAnos() {
   const anteriores = estado.anos.filter((a) => a !== estado.anoAtual).sort((a, b) => b - a);
-  const opcoes = [`<option value="atual">${estado.anoAtual} · ${STATUS_ANO[estado.statusAtual] || ''}</option>`]
-    .concat(anteriores.map((a) => `<option value="${a}">${a} · Votação encerrada</option>`));
+  const opcoes = [`<option value="atual">${estado.anoAtual}</option>`]
+    .concat(anteriores.map((a) => `<option value="${a}">${a}</option>`));
   $('ano').innerHTML = opcoes.join('');
   $('ano').value = estado.anoSel;
   $('bloco-ano').hidden = false;
