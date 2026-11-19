@@ -37,8 +37,8 @@ O SQL não configura o Auth. Faça uma vez:
 1. **Authentication > Hooks > Before User Created**: ative, tipo *Postgres function*, função `public.hook_so_convidados`. Sem isso qualquer pessoa consegue criar conta (mesmo assim ela fica sem papel e o RLS nega tudo, mas ligue o hook). Se não puder ligar o hook, use o trigger alternativo comentado no fim de `02_functions.sql`.
 2. **Authentication > Providers > Email**: desligue **Confirm email**. O cadastro devolve sessão na hora.
 3. **Authentication > URL Configuration**:
-   - **Site URL**: a URL de produção (ex.: `https://seu-dominio.com`).
-   - **Redirect URLs**: adicione `http://localhost:3000/nova-senha.html` (ou a porta que usar) e `https://seu-dominio.com/nova-senha.html`.
+   - **Site URL**: a URL da Vercel (ex.: `https://ggc-awards.vercel.app`); enquanto não houver deploy, `http://localhost:3000`.
+   - **Redirect URLs**: adicione `http://localhost:3000/**` e `https://ggc-awards.vercel.app/**` (o `**` cobre o link de `nova-senha.html`).
 4. Opcional: configure um SMTP próprio em **Authentication > SMTP Settings**. O SMTP padrão do Supabase tem limite baixo de e-mails e pode atrapalhar o "Esqueci a senha".
 
 ## Rodar local
@@ -47,8 +47,6 @@ Sem build. Sirva a pasta `public/`:
 
 ```bash
 npx serve public
-# ou
-python -m http.server 3000 --directory public
 ```
 
 Abra `http://localhost:3000`. O `index.html` redireciona conforme a sessão: sem login vai para `login.html`, votante para `inicio.html`, admin/dev para `admin-menu.html`.
@@ -71,12 +69,14 @@ Abra `http://localhost:3000`. O `index.html` redireciona conforme a sessão: sem
 
 ## Publicar
 
-Hospedagem estática, sem build: aponte a raiz publicada para `public/`.
+Hospedado na **Vercel** (plano Hobby, gratuito, sem cartão). Site estático, sem build.
 
-- **Vercel**: *Framework Preset* "Other", *Output Directory* `public`, sem build command.
-- **DigitalOcean App Platform**: componente *Static Site*, *Source Directory* `public`.
+1. Em vercel.com, **Add New > Project** e importe este repositório do GitHub.
+2. **Framework Preset**: Other. **Root Directory**: `./`.
+3. **Build and Output Settings**: deixe os três toggles desligados. A Vercel publica `public/` sozinha, porque a pasta existe, e não há build nem install.
+4. **Deploy**. Cada push na `main` publica de novo automaticamente.
 
-Depois do deploy, ajuste **Site URL** e **Redirect URLs** (passo 3 acima) para o domínio final.
+Depois do primeiro deploy, ajuste **Site URL** e **Redirect URLs** no Supabase (passo 3 acima) com o domínio da Vercel.
 
 ## Estrutura
 

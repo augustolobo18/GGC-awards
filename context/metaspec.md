@@ -10,7 +10,7 @@
 
 ## STACK
 ```
-Front:    HTML + CSS + vanilla JS (no framework, no build), static hosting (Vercel or DO App Platform, TBD)
+Front:    HTML + CSS + vanilla JS (no framework, no build), static hosting on Vercel (Hobby), publishes public/
 Client:   @supabase/supabase-js 2.45.4 via jsDelivr CDN (exact version pinned)
 Backend:  Supabase project cftzrevmsucsvkgnqpct (Auth, Postgres + RLS + RPC, Storage, Realtime)
 VCS:      git (main branch, GitHub origin)
@@ -63,4 +63,4 @@ page -> GGC.exigirSessao({roles}) -> sb (supabase-js) -> RLS / security definer 
   - Pages: login (sign-up, reset), nova-senha, inicio, urna (mobile layout), admin menu, participantes, categorias, apuracao
 - Technical debt:
   - Dashboard Auth settings pending: enable the Before User Created hook, turn Confirm email off, set Site URL and Redirect URLs
-  - E2E in browser (3 accounts, mobile) still to run; hosting not chosen or deployed
+  - E2E in browser (3 accounts, mobile) still to run; first Vercel deploy in progress
