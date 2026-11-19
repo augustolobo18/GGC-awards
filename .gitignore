@@ -1,0 +1,23 @@
+# Documentação de contexto do agente (skills context-init / context-update / walkthrough)
+context/
+
+# Planos de implementação (skill implementation-plan)
+plans/
+
+# Configuração local do Claude Code
+.claude/
+
+# Deploy / ambiente
+.vercel/
+.env
+.env.*
+
+# Node (caso algum dia entre tooling)
+node_modules/
+
+# Sistema operacional / editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
