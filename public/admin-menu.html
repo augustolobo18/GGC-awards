@@ -224,7 +224,25 @@
         </li>
 
         <li>
-          <a class="cartao urna" href="urna-eletronica.html">
+          <a class="cartao" href="admin-boas-vindas.html">
+            <span class="cartao-topo">
+              <span class="icone" aria-hidden="true">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#15180F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8"/><path d="M8 13h5"/></svg>
+              </span>
+              <span class="num" id="qtd-boas-vindas" aria-label="situação do texto">–</span>
+            </span>
+            <span class="cartao-txt">
+              <b>Boas-vindas</b>
+              <span>O recado do ano que o votante lê antes de entrar na urna.</span>
+            </span>
+            <span class="cartao-rodape">Editar texto
+              <svg class="seta" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+            </span>
+          </a>
+        </li>
+
+        <li>
+          <a class="cartao urna" href="boas-vindas.html">
             <span class="cartao-topo">
               <span class="icone" aria-hidden="true">
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h4"/><path d="M15 9h2"/><path d="M7 13h2"/><path d="M11 13h2"/><path d="M15 13h2"/><path d="M7 17h10"/></svg>
@@ -301,7 +319,8 @@
 <script>
 /* =====================================================================
    MENU DO ADMIN (admin e dev). Os links apontam para os outros arquivos:
-   admin-apuracao.html, admin-contas.html (participantes), admin-categorias.html, urna-eletronica.html.
+   admin-apuracao.html, admin-contas.html (participantes), admin-categorias.html, admin-boas-vindas.html,
+   boas-vindas.html (antes da urna) e urna-eletronica.html.
 
    Card "Edição": ano + abrir / encerrar / começar novo ano, via rpc
    abrir_votacao(), encerrar_votacao() e definir_ano(n) (o banco confere o papel e o status).
@@ -315,7 +334,7 @@ const api = {
     const cont = (q) => q.then((r) => { if (r.error) throw r.error; return r.count || 0; });
     const head = () => sb.from('contas').select('id', { count: 'exact', head: true });
     const [el, participantes, pendentes, candidatos, eleitores, categorias, votaram] = await Promise.all([
-      sb.from('eleicao').select('ano, status').eq('id', 1).single(),
+      sb.from('eleicao').select('ano, status, boas_vindas_titulo, boas_vindas_texto').eq('id', 1).single(),
       cont(head()),
       cont(head().is('user_id', null)),
       cont(head().not('numero', 'is', null)),
@@ -400,6 +419,7 @@ function render(r) {
   $('qtd-candidatos').textContent = r.candidatos;
   $('qtd-contas').textContent = r.participantes;
   $('qtd-categorias').textContent = r.categorias;
+  $('qtd-boas-vindas').textContent = (r.eleicao.boas_vindas_titulo || r.eleicao.boas_vindas_texto) ? 'Ativo' : 'Vazio';
   $('pendentes').hidden = !r.pendentes;
   $('pendentes').textContent = r.pendentes === 1 ? '1 aguardando' : `${r.pendentes} aguardando`;
   // prévia da apuração: números só com a votação aberta ou encerrada

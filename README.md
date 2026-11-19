@@ -58,6 +58,7 @@ Abra `http://localhost:3000`. O `index.html` redireciona conforme a sessão: sem
 1. Admin cadastra cada pessoa em **Participantes** (e-mail, nome, apelido, número, foto, papel) e cria as **Categorias** (uma é a principal).
 2. A pessoa abre o site, clica em "Primeiro acesso? Criar conta" e usa o e-mail cadastrado (e-mail fora da lista é recusado).
 3. No card **Edição** do menu admin: define o ano e abre a votação. Categorias e números ficam travados.
+   - Antes de abrir, escreva o recado do ano em **Boas-vindas**: o votante lê depois de "Começar a votar" e antes da urna (sem texto, a tela é pulada).
 4. Cada votante vota uma vez na urna (tudo gravado de uma vez no FIM). A **Apuração** atualiza ao vivo.
 5. Admin encerra: o resultado vira snapshot em `edicoes` + `apuracoes` e fica visível **só para admins** (cerimônia).
 6. Admin **publica os resultados**: o ano fica visível para todos na tela de resultados e o bastão de admin passa para o vencedor do GGC Of The Year (o admin anterior volta a votante). O admin do ano não pode ser votado no GGC Of The Year. Empate: o dev escolhe o vencedor no card Edição antes de publicar.

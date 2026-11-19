@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boas-vindas — GGC Awards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&family=Lilita+One&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+<link rel="icon" type="image/jpeg" href="assets/logo_ggc.jpg">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/texto.js"></script>
+<style>
+  :root{
+    --bg:#E7E9E4; --ink:#15180F; --muted:#4F554B; --muted2:#3E423A; --card:#fff; --line:#E3E6DF;
+    --borda:#C9CEC3; --campo:#FAFBF8; --foco:#1F5FBF; --ok:#35A55A; --ok-sombra:#1B6332; --perigo:#B42318;
+    --azul:#0A63AD; --amarelo:#FFC21A; --marinho:#0B2A4A;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif}
+  button,input,textarea{font-family:inherit}
+
+  .pagina{min-height:100vh;padding:32px 24px 64px}
+  .wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+
+  .topo{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 24px}
+  .topo-acoes{display:flex;flex-wrap:wrap;gap:10px}
+  .sobre{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-decoration:none}
+  .sobre:hover{color:var(--ink)}
+  h1{margin:4px 0;font-family:'Space Grotesk',Inter,sans-serif;font-size:36px;line-height:1.1}
+  .resumo{font-size:15px;color:var(--muted)}
+
+  .btn{min-height:46px;padding:0 18px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:10px;
+    text-decoration:none;transition:background .15s,transform .06s}
+  .btn:active{transform:translateY(1px)}
+  .btn:focus-visible{outline:3px solid var(--foco);outline-offset:2px}
+  .btn-claro{border:1.5px solid var(--borda);background:#fff;color:var(--ink)}
+  .btn-claro:hover{background:#F2F5F0}
+  .btn-ok{border:0;padding:0 22px;background:var(--ok);color:#0B1A0F;font-weight:700;box-shadow:0 3px 0 var(--ok-sombra)}
+  .btn-ok:hover{background:#2F9550}
+  .btn-ok:disabled{opacity:.6;cursor:not-allowed}
+
+  .colunas{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+  .card{background:var(--card);border-radius:18px;box-shadow:0 10px 30px rgba(30,35,25,.10);padding:22px;display:flex;flex-direction:column;gap:16px}
+  .card h2{margin:0;font-family:'Space Grotesk',Inter,sans-serif;font-size:20px}
+
+  label{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600;color:var(--muted2)}
+  .campo{width:100%;padding:12px 14px;border:1.5px solid var(--borda);border-radius:10px;font-size:15px;color:var(--ink);background:var(--campo)}
+  .campo:focus{outline:none;border-color:var(--foco);box-shadow:0 0 0 3px rgba(31,95,191,.18)}
+  textarea.campo{min-height:380px;resize:vertical;line-height:1.55;font-size:15px}
+  .contador{align-self:flex-end;font-size:12px;font-weight:500;color:var(--muted)}
+  .dicas{margin:0;padding:12px 14px;border-radius:12px;background:#F4F6F1;font-size:13px;line-height:1.6;color:var(--muted2)}
+  .dicas code{font-family:ui-monospace,Consolas,monospace;background:#fff;border:1px solid var(--line);border-radius:5px;padding:0 5px}
+
+  /* prévia no visual da tela do votante */
+  .previa{border-radius:22px;padding:28px 24px;background:var(--azul);
+    background-image:radial-gradient(circle at 15% 15%,rgba(94,214,255,.6) 0,transparent 45%),radial-gradient(circle at 85% 90%,rgba(255,194,26,.55) 0,transparent 45%);
+    font-family:Nunito,system-ui,sans-serif;color:#fff}
+  .previa-vidro{border-radius:22px;padding:24px 20px;background:rgba(8,44,88,.45);border:1.5px solid rgba(255,255,255,.45);display:flex;flex-direction:column;gap:14px}
+  .previa-marca{font-family:'Lilita One',Nunito,sans-serif;font-size:17px;letter-spacing:.06em;color:var(--amarelo);text-align:center}
+  .previa-titulo{margin:0;font-family:'Lilita One',Nunito,sans-serif;font-weight:400;font-size:26px;line-height:1.1;text-align:center;text-shadow:0 2px 0 var(--marinho)}
+  .previa-titulo:empty{display:none}
+  .previa-texto{max-height:420px;overflow-y:auto;font-size:15px;line-height:1.6;font-weight:600}
+  .previa-texto p{margin:0 0 12px}
+  .previa-texto p:last-child{margin:0}
+  .previa-texto strong{font-weight:900;color:#FFE38A}
+  .previa-btn{min-height:50px;border-radius:16px;border:3px solid var(--marinho);background:var(--amarelo);color:var(--marinho);
+    display:flex;align-items:center;justify-content:center;font-family:'Lilita One',Nunito,sans-serif;font-size:19px;box-shadow:0 4px 0 var(--marinho)}
+  .vazio-previa{opacity:.85;font-style:italic}
+
+  .info{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:14px;background:#FFF4D6;border:1.5px solid #E8C766;font-size:14px;line-height:1.5;color:var(--muted2)}
+  .info strong{color:var(--ink)}
+
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:30;padding:12px 18px;border-radius:12px;background:var(--ink);color:#fff;
+    font-size:14px;font-weight:600;display:flex;gap:10px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:calc(100% - 32px)}
+  .toast[hidden]{display:none}
+  .toast.erro{background:#5E120C}
+
+  @media (max-width:900px){ .colunas{grid-template-columns:1fr} textarea.campo{min-height:280px} }
+  @media (max-width:560px){ .pagina{padding:24px 16px 48px} h1{font-size:30px} }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <div class="wrap">
+    <header class="topo">
+      <div>
+        <a class="sobre" href="admin-menu.html">← GGC Awards · Admin</a>
+        <h1>Boas-vindas</h1>
+        <span class="resumo">Texto que o votante vê depois de “Começar a votar”, antes da urna.</span>
+      </div>
+      <div class="topo-acoes">
+        <a class="btn btn-claro" href="boas-vindas.html?previa=1">Ver em tela cheia</a>
+        <button class="btn btn-ok" type="button" id="btn-salvar" disabled>Salvar</button>
+      </div>
+    </header>
+
+    <div class="info">
+      <span><strong>Sem título e sem texto, a tela é pulada</strong> e o votante vai direto para a urna. Salvo aqui vale na hora para quem ainda não clicou em “Começar a votar”.</span>
+    </div>
+
+    <div class="colunas">
+      <section class="card" aria-labelledby="t-editar">
+        <h2 id="t-editar">Editar</h2>
+        <label>Título
+          <input class="campo" id="campo-titulo" maxlength="200" placeholder="Ex.: GGC AWARDS - Edição Fully Developed Brain (2026)">
+        </label>
+        <label>Texto
+          <textarea class="campo" id="campo-texto" maxlength="8000" placeholder="Bem-vindo à votação do **GGC Awards 2026**!&#10;&#10;Escreva aqui o recado do ano, as regras e a data da cerimônia."></textarea>
+        </label>
+        <span class="contador" id="contador"></span>
+        <p class="dicas">
+          Formatação: <code>**negrito**</code> &nbsp; <code>*itálico*</code> &nbsp; uma linha em branco separa parágrafos; Enter simples quebra a linha.
+        </p>
+      </section>
+
+      <section class="card" aria-labelledby="t-previa">
+        <h2 id="t-previa">Prévia</h2>
+        <div class="previa">
+          <div class="previa-vidro">
+            <span class="previa-marca" id="previa-marca">GGC Awards</span>
+            <h3 class="previa-titulo" id="previa-titulo"></h3>
+            <div class="previa-texto" id="previa-texto"></div>
+            <span class="previa-btn" aria-hidden="true">Continuar para a urna →</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden><span id="toast-texto"></span></div>
+
+<script>
+/* =====================================================================
+   EDITOR DE BOAS-VINDAS (admin e dev)
+   Lê eleicao.boas_vindas_titulo / boas_vindas_texto e salva pela rpc salvar_boas_vindas()
+   (o banco confere o papel). A tela do votante é boas-vindas.html.
+   ===================================================================== */
+
+const $ = (id) => document.getElementById(id);
+const estado = { salvo: { titulo: '', texto: '' }, salvando: false };
+
+let timerToast;
+function avisar(msg, erro = false) {
+  clearTimeout(timerToast);
+  $('toast-texto').textContent = msg;
+  $('toast').classList.toggle('erro', erro);
+  $('toast').hidden = false;
+  timerToast = setTimeout(() => { $('toast').hidden = true; }, erro ? 4500 : 2600);
+}
+
+const atual = () => ({ titulo: $('campo-titulo').value, texto: $('campo-texto').value });
+const mudou = () => {
+  const a = atual();
+  return a.titulo.trim() !== estado.salvo.titulo.trim() || a.texto.trim() !== estado.salvo.texto.trim();
+};
+
+function renderPrevia() {
+  const { titulo, texto } = atual();
+  $('previa-titulo').textContent = titulo.trim();
+  $('previa-texto').innerHTML = GGC.formatarTexto(texto) ||
+    '<p class="vazio-previa">Sem texto: o votante pula esta tela e vai direto para a urna.</p>';
+  $('contador').textContent = `${texto.length} / 8000`;
+  $('btn-salvar').disabled = estado.salvando || !mudou();
+  $('btn-salvar').textContent = mudou() ? 'Salvar' : 'Salvo';
+}
+
+async function salvar() {
+  if (estado.salvando || !mudou()) return;
+  estado.salvando = true;
+  renderPrevia();
+  const { titulo, texto } = atual();
+  try {
+    const { error } = await sb.rpc('salvar_boas_vindas', { p_titulo: titulo, p_texto: texto });
+    if (error) throw error;
+    estado.salvo = { titulo, texto };
+    avisar('Boas-vindas salvas.');
+  } catch (e) {
+    console.error(e);
+    avisar(GGC.msgErro(e, 'Não deu para salvar. Tente de novo.'), true);
+  } finally {
+    estado.salvando = false;
+    renderPrevia();
+  }
+}
+
+$('campo-titulo').addEventListener('input', renderPrevia);
+$('campo-texto').addEventListener('input', renderPrevia);
+$('btn-salvar').addEventListener('click', salvar);
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); salvar(); }
+});
+window.addEventListener('beforeunload', (e) => { if (mudou()) { e.preventDefault(); e.returnValue = ''; } });
+
+(async function iniciar() {
+  await GGC.exigirSessao({ roles: ['admin', 'dev'] });
+  try {
+    const { data, error } = await sb.from('eleicao').select('ano, boas_vindas_titulo, boas_vindas_texto').eq('id', 1).single();
+    if (error) throw error;
+    estado.salvo = { titulo: data.boas_vindas_titulo || '', texto: data.boas_vindas_texto || '' };
+    $('campo-titulo').value = estado.salvo.titulo;
+    $('campo-texto').value = estado.salvo.texto;
+    $('previa-marca').textContent = `GGC Awards ${data.ano}`;
+  } catch (e) {
+    console.error(e);
+    avisar('Não deu para carregar o texto.', true);
+  }
+  renderPrevia();
+})();
+</script>
+</body>
+</html>
