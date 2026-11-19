@@ -165,7 +165,7 @@
      votou     → a pessoa já votou: botão desabilitado "Voto registrado"
      encerrada → admin encerrou: botão desabilitado (resultado só depois da cerimônia)
      publicada → admin publicou: botão "Ver resultados" leva para a apuração
-   Link "Ver resultados de anos anteriores" aparece quando existe algum ano publicado.
+   Link para os resultados aparece sempre (a tela de resultados avisa se nada foi publicado).
 
    Fonte: tabela "eleicao" (1 linha), rpc ja_votei(), categorias e rpc candidatos_urna().
    Esconder o botão é só UX: quem barra voto fora de hora é a função votar() no banco.
@@ -281,7 +281,9 @@ function render() {
   $('btn-votar').hidden = !aberta;
   $('btn-ver-resultados').hidden = !publicada;
   $('btn-bloqueado').hidden = aberta || publicada;
-  $('link-resultados').hidden = publicada || !estado.temResultados;
+  // sempre dá para entrar nos resultados; sem nada publicado, a tela avisa
+  $('link-resultados').hidden = publicada;
+  $('link-resultados').textContent = estado.temResultados ? 'Ver resultados de anos anteriores' : 'Ver resultados';
   $('btn-bloqueado').dataset.icone = e.icone || '';
   $('rotulo-bloqueado').textContent = e.rotulo || '';
 
