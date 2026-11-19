@@ -23,7 +23,7 @@
     const { data: { session } } = await sb.auth.getSession();
     if (!session) return null;
     const { data: conta, error } = await sb.from('contas')
-      .select('id, nome, apelido, numero, role')
+      .select('id, nome, apelido, numero, foto_url, role')
       .eq('user_id', session.user.id)
       .maybeSingle();
     if (error) throw error;
@@ -68,5 +68,17 @@
     return padrao;
   }
 
-  window.GGC = { sessaoAtual, exigirSessao, destinoPorRole, sair, liberarPagina, msgErro, LOGIN };
+  // Avatar do usuário no topo: foto se tiver, senão a inicial (se a foto falhar, volta pra inicial)
+  function preencherAvatar(el, conta, letra) {
+    const inicial = (letra || '?').toUpperCase();
+    el.textContent = inicial;
+    if (!conta || !conta.foto_url) return;
+    const img = new Image();
+    img.alt = '';
+    img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;display:block';
+    img.onload = () => { el.textContent = ''; el.appendChild(img); };
+    img.src = conta.foto_url;
+  }
+
+  window.GGC = { sessaoAtual, exigirSessao, destinoPorRole, sair, liberarPagina, msgErro, preencherAvatar, LOGIN };
 })();

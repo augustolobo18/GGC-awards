@@ -280,7 +280,7 @@ async function atualizarEstado() {
   const apelido = (usuario.apelido || String(usuario.nome || '').split(' ')[0] || '').trim();
   $('ola').textContent = apelido ? `E aí, ${apelido}!` : 'E aí!';
   $('nome-chip').textContent = apelido;
-  $('iniciais').textContent = (apelido[0] || '?').toUpperCase();
+  GGC.preencherAvatar($('iniciais'), usuario, apelido[0]);
 
   try {
     const [, resumo] = await Promise.all([atualizarEstado(), api.resumo()]);

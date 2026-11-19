@@ -462,7 +462,7 @@ $('btn-sair').addEventListener('click', () => GGC.sair());
   const { conta } = await GGC.exigirSessao({ roles: ['admin', 'dev'] });
   const primeiro = String(conta.apelido || conta.nome || '').trim().split(/\s+/)[0] || '';
   $('ola').textContent = primeiro ? `Olá, ${primeiro}` : 'Olá!';
-  $('iniciais').textContent = (primeiro[0] || '?').toUpperCase();
+  GGC.preencherAvatar($('iniciais'), conta, primeiro[0]);
   await recarregar();
 
   // o número de quem já votou e o status acompanham em tempo real
