@@ -1,4 +1,4 @@
--- GGC Awards — 99: checks (rode DEPOIS de 01-04; nada persiste)
+-- GGC Awards — 99: checks (rode DEPOIS de 01-06; nada persiste)
 -- Cada bloco falha com ASSERT se algo estiver errado.
 
 -- ------------------------------------------------------------ 1. estaticos
@@ -53,13 +53,14 @@ end $$;
 -- ------------------------------------------------ 2. comportamento (rollback)
 -- Simula auth com request.jwt.claims + set local role. Tudo roda numa sub-transacao
 -- que termina com uma excecao propositada, entao NADA persiste.
--- Pre-requisito: seed aplicado (>= 3 categorias) e votacao em qualquer estado.
+-- Pre-requisito: seed aplicado (>= 1 categoria) e votacao em qualquer estado.
 do $$
 declare
   v_a    uuid := gen_random_uuid();
   v_b    uuid := gen_random_uuid();
   v_adm  uuid := gen_random_uuid();
   v_payload jsonb;
+  v_payload_b jsonb;
   v_n    int;
   v_base int;
   v_ok   boolean;
@@ -70,7 +71,7 @@ begin
   begin
     -- ---- setup (como postgres, sem claims)
     select count(*) into v_cat from public.categorias;
-    assert v_cat >= 3, 'rode 04_seed.sql antes (>= 3 categorias)';
+    assert v_cat >= 1, 'rode 04_seed.sql antes (>= 1 categoria)';
     assert not exists (select 1 from public.contas where numero in ('91','92')),
       'numeros 91/92 ja usados; o teste precisa deles livres';
 
@@ -97,16 +98,13 @@ begin
 
     update public.eleicao set status = 'aberta' where id = 1;
 
-    select jsonb_agg(jsonb_build_object(
-             'categoria_id', id,
-             'numero', case rn when 1 then '91' when 2 then '92' when 3 then '93' else null end,
-             'branco', rn > 3) order by rn)
-      into v_payload
-      from (select id, row_number() over (order by ordem, id) rn from public.categorias) s;
+    -- sem branco/nulo: A vota em B (92) em todas; B vota em A (91) em todas
+    select jsonb_agg(jsonb_build_object('categoria_id', id, 'numero', '92')) into v_payload from public.categorias;
+    select jsonb_agg(jsonb_build_object('categoria_id', id, 'numero', '91')) into v_payload_b from public.categorias;
 
     select count(*) into v_base from public.votos;
 
-    -- ---- votante A (rn1 = proprio numero 91 -> nulo; rn2 = 92 -> nominal em B; rn3 = 93 -> nulo)
+    -- ---- votante A
     perform set_config('request.jwt.claims', json_build_object('sub', v_a, 'role', 'authenticated')::text, true);
     perform set_config('request.jwt.claim.sub', v_a::text, true);
     set local role authenticated;
@@ -129,6 +127,16 @@ begin
     v_ok := false;
     begin perform public.votar(v_payload - 0); exception when others then v_ok := true; end;
     assert v_ok, 'votar aceitou voto sem uma categoria';
+    -- proprio numero (91), numero inexistente (93) e branco sao recusados por inteiro
+    v_ok := false;
+    begin perform public.votar(v_payload_b); exception when others then v_ok := true; end;
+    assert v_ok, 'votar aceitou o proprio numero';
+    v_ok := false;
+    begin perform public.votar((select jsonb_agg(jsonb_build_object('categoria_id', id, 'numero', '93')) from public.categorias)); exception when others then v_ok := true; end;
+    assert v_ok, 'votar aceitou numero inexistente';
+    v_ok := false;
+    begin perform public.votar((select jsonb_agg(jsonb_build_object('categoria_id', id, 'numero', null, 'branco', true)) from public.categorias)); exception when others then v_ok := true; end;
+    assert v_ok, 'votar aceitou branco';
     assert not public.ja_votei(), 'voto invalido nao pode registrar comparecimento';
 
     perform public.votar(v_payload);
@@ -148,10 +156,10 @@ begin
     begin perform public.qtd_que_votaram(); exception when others then v_ok := true; end;
     assert v_ok, 'votante chamou qtd_que_votaram';
 
-    -- ---- votante B (mesmo payload: 91 -> nominal em A; 92 = proprio -> nulo; 93 -> nulo)
+    -- ---- votante B (vota em A)
     perform set_config('request.jwt.claims', json_build_object('sub', v_b, 'role', 'authenticated')::text, true);
     perform set_config('request.jwt.claim.sub', v_b::text, true);
-    perform public.votar(v_payload);
+    perform public.votar(v_payload_b);
 
     -- ---- admin
     perform set_config('request.jwt.claims', json_build_object('sub', v_adm, 'role', 'authenticated')::text, true);
@@ -186,14 +194,10 @@ begin
 
     select count(*) into v_n from public.votos;
     assert v_n - v_base = 2 * v_cat, format('esperado %s votos novos, vieram %s', 2 * v_cat, v_n - v_base);
-    -- A votando no proprio 91: nenhum voto nominal em A vindo de A -> so o de B
-    assert (select count(*) from public.votos where conta_id = v_id_a and tipo = 'nominal') = 1,
-      'A deveria ter exatamente 1 voto nominal (o de B), nunca o proprio';
-    assert (select count(*) from public.votos where conta_id = v_id_b and tipo = 'nominal') = 1,
-      'B deveria ter exatamente 1 voto nominal (o de A), nunca o proprio';
-    assert (select count(*) from public.votos where tipo <> 'nominal' and conta_id is not null) = 0,
-      'branco/nulo com conta_id';
-    assert (select count(*) from public.votos where tipo = 'nulo') >= 4, 'esperados >= 4 votos nulos (2 auto-votos + 2 inexistentes)';
+    -- cada um recebeu um voto por categoria (o do outro), e so existem votos em candidatos
+    assert (select count(*) from public.votos where conta_id = v_id_a) = v_cat, 'A deveria ter um voto por categoria (os de B)';
+    assert (select count(*) from public.votos where conta_id = v_id_b) = v_cat, 'B deveria ter um voto por categoria (os de A)';
+    assert (select count(*) from public.votos where tipo <> 'nominal' or conta_id is null) = 0, 'voto sem candidato gravado';
 
     -- encerrar congela (como admin de novo)
     perform set_config('request.jwt.claims', json_build_object('sub', v_adm, 'role', 'authenticated')::text, true);

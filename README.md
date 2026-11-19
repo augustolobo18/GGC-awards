@@ -60,11 +60,12 @@ Abra `http://localhost:3000`. O `index.html` redireciona conforme a sessão: sem
 3. No card **Edição** do menu admin: define o ano e abre a votação. Categorias e números ficam travados.
 4. Cada votante vota uma vez na urna (tudo gravado de uma vez no FIM). A **Apuração** atualiza ao vivo.
 5. Admin encerra: o resultado vira snapshot em `edicoes` + `apuracoes`. "Começar novo ano" reinicia a edição e o histórico fica no seletor de ano da apuração.
+6. **Admin rotativo:** o vencedor do GGC Of The Year vira o admin ao começar o novo ano (o admin anterior volta a votante). O admin do ano não pode ser votado no GGC Of The Year. Empate: o dev escolhe o vencedor no card Edição.
 
 ## Voto secreto: o que o sistema garante e o limite
 
 - `votos` não tem eleitor nem timestamp e usa `id` aleatório; quem votou fica só em `comparecimento`.
-- `votar()` resolve número em participante no servidor; número inexistente ou o próprio vira voto nulo.
+- Não existe voto branco nem nulo: `votar()` só aceita número de candidato válido (existe, não é o próprio e, no GGC Of The Year, não é o admin do ano) e recusa o envio inteiro se algum for inválido.
 - **Limite:** quem tem acesso de superusuário ao banco, ou um admin que acompanha a apuração ao vivo no instante em que alguém vota, pode inferir um voto por correlação. Para evitar, só consulte a apuração depois de encerrar.
 
 ## Publicar

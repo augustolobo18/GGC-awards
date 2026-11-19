@@ -98,8 +98,6 @@
   .rk-pct{font-size:15px;font-weight:700}
   .rk-votos{width:64px;font-size:13px;color:var(--texto-claro);text-align:right}
   .ranking-principal .trilho{margin-left:34px}
-  .principal-rodape{display:flex;flex-wrap:wrap;gap:8px 24px;margin-top:28px;padding-top:18px;border-top:1px solid rgba(255,255,255,.18);font-size:14px;color:var(--texto-claro)}
-  .principal-rodape strong{color:#fff}
   .sem-votos-principal{margin:0;padding:40px 0;text-align:center;font-size:18px;color:var(--texto-claro)}
 
   /* categorias */
@@ -142,8 +140,6 @@
   .cr-pct{font-weight:700}
   .cr-votos{width:58px;color:var(--muted);text-align:right;font-size:13px}
   .cat-vazia{margin:0;padding:24px 0;text-align:center;font-size:14px;color:var(--muted)}
-  .cat-rodape{margin-top:auto;padding-top:12px;border-top:1px solid var(--line2);display:flex;gap:16px;font-size:13px;color:var(--muted)}
-  .cat-rodape strong{color:var(--ink)}
   .nada{background:#fff;border-radius:18px;padding:48px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;color:var(--muted);font-size:14px}
   .nada b{font-size:16px;color:var(--ink)}
   .nada[hidden]{display:none}
@@ -216,7 +212,7 @@
 
     <div class="cat-titulo">
       <h2>Categorias</h2>
-      <span>% sobre os votos válidos</span>
+      <span>% sobre o total de votos</span>
     </div>
 
     <div class="barra-filtro" role="search" aria-label="Filtrar categorias">
@@ -351,22 +347,19 @@ const foto = (c, classe) => c.foto_url
 
 /* ---------------- cálculo ---------------- */
 function apurar(cat, d) {
-  const linhas = d.apuracao.filter((a) => a.categoria_id === cat.id);
-  const soma = (tipo) => linhas.filter((a) => a.tipo === tipo).reduce((t, a) => t + a.votos, 0);
-  const validos = soma('nominal');
-  const brancos = soma('branco');
-  const nulos = soma('nulo');
+  // só existem votos em candidatos (sem branco/nulo): % sobre o total da categoria
+  const linhas = d.apuracao.filter((a) => a.categoria_id === cat.id && a.tipo === 'nominal');
+  const total = linhas.reduce((t, a) => t + a.votos, 0);
 
   const ranking = linhas
-    .filter((a) => a.tipo === 'nominal')
+    .slice()
     .sort((a, b) => b.votos - a.votos || a.candidato.nome.localeCompare(b.candidato.nome, 'pt-BR'))
-    .map((a, i) => ({ ...a.candidato, posicao: i + 1, votos: a.votos, pct: validos ? Math.round((a.votos / validos) * 100) : 0 }));
+    .map((a, i) => ({ ...a.candidato, posicao: i + 1, votos: a.votos, pct: total ? Math.round((a.votos / total) * 100) : 0 }));
 
   const empatados = ranking.filter((r) => r.votos === ranking[0]?.votos);
   return {
     ...cat,
-    validos, brancos, nulos,
-    total: validos + brancos + nulos,
+    total,
     ranking,
     temVotos: ranking.length > 0,
     empate: empatados.length > 1,
@@ -396,12 +389,7 @@ function renderPrincipal(p) {
       <div class="principal-titulo">${trofeu}<h2 id="titulo-principal">${esc(p.titulo)}</h2></div>
       <span class="pilula-clara">${votosTexto(p.total)}</span>
     </div>`;
-  const rodape = `
-    <div class="principal-rodape">
-      <span>Votos válidos: <strong>${p.validos}</strong></span>
-      <span>Brancos: <strong>${p.brancos}</strong></span>
-      <span>Nulos: <strong>${p.nulos}</strong></span>
-    </div>`;
+  const rodape = '';
 
   if (!p.temVotos) {
     $('principal').innerHTML = topo + `<p class="sem-votos-principal">Ainda não tem votos para o ${esc(p.titulo)}.</p>` + rodape;
@@ -436,7 +424,7 @@ function renderPrincipal(p) {
         </div>
         <div class="lider-pct">
           <b>${l.pct}%</b>
-          <span>dos votos válidos<br>${votosTexto(l.votos)}</span>
+          <span>dos votos<br>${votosTexto(l.votos)}</span>
         </div>
       </div>
       <div class="ranking-principal">
@@ -473,9 +461,7 @@ function cardCategoria(c) {
   return `
     <article class="cat" aria-label="${esc(c.titulo)}">
       <div class="cat-topo"><h3>${esc(c.titulo)}</h3><span class="cat-total">${votosTexto(c.total)}</span></div>
-      ${corpo}
-      <div class="cat-rodape"><span>Brancos: <strong>${c.brancos}</strong></span><span>Nulos: <strong>${c.nulos}</strong></span></div>
-    </article>`;
+      ${corpo}    </article>`;
 }
 
 function renderCategorias() {

@@ -15,7 +15,7 @@
   :root{
     --bg:#E7E9E4; --ink:#15180F; --muted:#4F554B; --card:#fff; --line:#E3E6DF;
     --urna:#D8D3C6; --tela:#EEF0E8; --tecla:#121311; --painel:#2A2B28;
-    --branco:#FAFAF7; --corrige:#E8762C; --confirma:#35A55A; --sel:#E6F4EA; --sel-borda:#2E8A4C;
+    --corrige:#E8762C; --confirma:#35A55A; --sel:#E6F4EA; --sel-borda:#2E8A4C;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif}
@@ -58,6 +58,7 @@
   .dados strong{text-transform:uppercase}
   .aviso{font-size:20px;font-weight:700}
   .grande{font-size:38px;font-weight:700;align-self:center;text-align:center}
+  .motivo{font-size:22px;font-weight:700;align-self:center;text-align:center;line-height:1.25}
   .pisca{animation:pisca 1s steps(1) infinite}
   .instrucoes{border-top:1.5px solid #111;margin:0 3%;padding:8px 2% 12px;font-size:13px;line-height:1.5}
   .instrucoes div+div{padding-left:18px}
@@ -84,7 +85,6 @@
   .tecla.num.zero{grid-column:2}
   .acoes{display:flex;gap:8px;align-items:flex-end}
   .tecla.acao{flex:1;height:50px;font-size:13px;color:#111}
-  .tecla.b{background:var(--branco);box-shadow:0 3px 0 #8E8F88}
   .tecla.c{background:var(--corrige);box-shadow:0 3px 0 #9A4710}
   .tecla.ok{flex:1.25;height:62px;background:var(--confirma);color:#0B1A0F;box-shadow:0 3px 0 #1B6332}
 
@@ -199,7 +199,6 @@
             <div class="painel">
               <div class="numeros" id="numeros"></div>
               <div class="acoes">
-                <button type="button" class="tecla acao b" data-acao="branco">BRANCO</button>
                 <button type="button" class="tecla acao c" data-acao="corrige">CORRIGE</button>
                 <button type="button" class="tecla acao ok" data-acao="confirma">CONFIRMA</button>
               </div>
@@ -228,9 +227,10 @@
 
    candidatos_urna(): participantes com número, EXCETO o próprio eleitor (id, numero, nome, apelido, foto_url).
    categorias:        id | ordem | titulo | descricao | principal (a principal vota por último)
-   votar(p_votos):    [{ categoria_id, numero|null, branco }], tudo de uma vez no FIM.
-                      O banco confere a votação aberta, o voto único e converte número
-                      inexistente (ou o próprio) em voto nulo.
+   votar(p_votos):    [{ categoria_id, numero }], tudo de uma vez no FIM.
+                      Não existe branco nem nulo: só dá para confirmar número de candidato válido
+                      (existe, não é o próprio e, no GGC Of The Year, não é o admin do ano).
+                      O banco recusa o envio inteiro se algum número for inválido.
    ===================================================================== */
 
 const SOM_LIGADO = true;
@@ -271,7 +271,6 @@ const estado = {
   categorias: [],
   etapa: 0,
   digitos: '',
-  branco: false,
   fim: false,
   envio: 'parado',     // 'parado' | 'enviando' | 'ok' | 'erro'
   erroEnvio: '',
@@ -287,13 +286,23 @@ const iniciais = (nome) => {
   const p = String(nome || '').trim().split(/\s+/);
   return (((p[0] || '')[0] || '') + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase();
 };
-// No GGC Of The Year (principal) o admin do ano não concorre: some da lista e o número dele vira nulo
+// No GGC Of The Year (principal) o admin do ano não concorre: some da lista e o número dele é recusado
 // (o banco aplica a mesma regra em votar()). Nas outras categorias todo mundo concorre.
 const candidatosDaEtapa = () => {
   const cat = estado.categorias[estado.etapa];
   return cat && cat.principal ? estado.candidatos.filter((c) => !c.bloqueado_principal) : estado.candidatos;
 };
 const acharCandidato = (n) => candidatosDaEtapa().find((c) => c.numero === n);
+
+// Por que um número completo não vale (para a mensagem na tela)
+function motivoInvalido(n) {
+  if (SESSAO && SESSAO.conta.numero === n) return 'Você não pode votar em si mesmo.';
+  const cat = estado.categorias[estado.etapa];
+  if (cat && cat.principal && estado.candidatos.some((c) => c.numero === n && c.bloqueado_principal)) {
+    return 'O admin do ano não concorre no GGC Of The Year.';
+  }
+  return 'Esse número não está na disputa.';
+}
 
 /* ---------------- som ---------------- */
 let audioCtx;
@@ -322,7 +331,7 @@ const somTecla = () => bip([[1200, 0.05]]);
 const travada = () => estado.carregando || estado.fim || !!estado.falhaCarga;
 
 function digitar(d) {
-  if (travada() || estado.branco || estado.digitos.length >= 2) return;
+  if (travada() || estado.digitos.length >= 2) return;
   somTecla();
   estado.digitos += d;
   render();
@@ -332,15 +341,6 @@ function escolher(numero) {
   if (travada()) return;
   somTecla();
   estado.digitos = numero;
-  estado.branco = false;
-  render();
-}
-
-function apertarBranco() {
-  // como na urna real: só funciona com o campo vazio
-  if (travada() || estado.digitos.length > 0) return;
-  somTecla();
-  estado.branco = true;
   render();
 }
 
@@ -348,23 +348,20 @@ function apertarCorrige() {
   if (travada()) return;
   bip([[900, 0.05]]);
   estado.digitos = '';
-  estado.branco = false;
   render();
 }
 
 function apertarConfirma() {
   if (travada()) return;
-  if (!estado.branco && estado.digitos.length < 2) return;
+  if (estado.digitos.length < 2) return;
+  // número que não está na disputa não confirma: avisa na tela e espera CORRIGE
+  if (!acharCandidato(estado.digitos)) { bip([[300, 0.18]]); return; }
 
   const cat = estado.categorias[estado.etapa];
-  // o servidor decide se o número existe (ou é o próprio): aqui só guardamos o que foi digitado
-  estado.votos.push(estado.branco
-    ? { categoria_id: cat.id, numero: null, branco: true }
-    : { categoria_id: cat.id, numero: estado.digitos, branco: false });
+  estado.votos.push({ categoria_id: cat.id, numero: estado.digitos });
 
   const ultima = estado.etapa >= estado.categorias.length - 1;
   estado.digitos = '';
-  estado.branco = false;
   estado.busca = '';
   $('busca').value = '';
 
@@ -462,11 +459,11 @@ function renderTela() {
   const cat = estado.categorias[estado.etapa] || { titulo: '', descricao: '' };
   const d = estado.digitos;
   const completo = d.length === 2;
-  const cand = completo && !estado.branco ? acharCandidato(d) : null;
-  const errado = completo && !cand && !estado.branco;
+  const cand = completo ? acharCandidato(d) : null;
+  const errado = completo && !cand;
 
   const caixa = (i) =>
-    `<span class="caixa${!estado.branco && d.length === i ? ' atual' : ''}">${esc(d[i] || '')}</span>`;
+    `<span class="caixa${d.length === i ? ' atual' : ''}">${esc(d[i] || '')}</span>`;
 
   let meio = '';
   if (cand) {
@@ -475,22 +472,25 @@ function renderTela() {
       <div>Apelido: <strong>${esc(cand.apelido)}</strong></div>
     </div>`;
   } else if (errado) {
-    meio = `<span class="aviso">NÚMERO ERRADO</span><span class="grande pisca">VOTO NULO</span>`;
-  } else if (estado.branco) {
-    meio = `<span class="grande pisca">VOTO EM BRANCO</span>`;
+    meio = `<span class="aviso">NÚMERO INVÁLIDO</span><span class="motivo pisca">${esc(motivoInvalido(d))}</span>`;
   }
 
   const foto = cand
     ? `<div class="foto-box">${avatarHTML(cand, 'foto-grande')}<span>Candidato</span></div>`
     : '';
 
-  const instrucoes = estado.branco || completo
+  const instrucoes = cand
     ? `<div class="instrucoes">
         <div>Aperte a tecla:</div>
         <div><strong>CONFIRMA</strong> para <strong>CONFIRMAR</strong> este voto</div>
         <div><strong>CORRIGE</strong> para <strong>REINICIAR</strong> este voto</div>
       </div>`
-    : `<div style="height:12px"></div>`;
+    : errado
+      ? `<div class="instrucoes">
+          <div>Esse voto não pode ser confirmado.</div>
+          <div>Aperte <strong>CORRIGE</strong> e digite outro número</div>
+        </div>`
+      : `<div style="height:12px"></div>`;
 
   tela.innerHTML = `
     <div class="tela-corpo">
@@ -512,7 +512,7 @@ function renderTela() {
 function renderLista() {
   const termo = estado.busca.trim().toLowerCase();
   const d = estado.digitos;
-  const ativo = !travada() && !estado.branco;
+  const ativo = !travada();
   const daEtapa = candidatosDaEtapa();
   const filtrados = daEtapa.filter((c) =>
     !termo ||
@@ -582,7 +582,6 @@ document.addEventListener('click', (e) => {
   const t = e.target.closest('button');
   if (!t) return;
   if (t.dataset.digito) digitar(t.dataset.digito);
-  else if (t.dataset.acao === 'branco') apertarBranco();
   else if (t.dataset.acao === 'corrige') apertarCorrige();
   else if (t.dataset.acao === 'confirma') apertarConfirma();
   else if (t.dataset.numero) escolher(t.dataset.numero);
@@ -594,9 +593,7 @@ $('urna').addEventListener('keydown', (e) => {
   const k = e.key;
   if (/^[0-9]$/.test(k)) { e.preventDefault(); digitar(k); }
   else if (k === 'Enter') { e.preventDefault(); apertarConfirma(); }
-  else if (k === 'Backspace' || k === 'Delete' || k === 'Escape') { e.preventDefault(); apertarCorrige(); }
-  else if (k === 'b' || k === 'B') { e.preventDefault(); apertarBranco(); }
-});
+  else if (k === 'Backspace' || k === 'Delete' || k === 'Escape') { e.preventDefault(); apertarCorrige(); }});
 
 $('busca').addEventListener('input', (e) => {
   estado.busca = e.target.value;
