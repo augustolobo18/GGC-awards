@@ -97,6 +97,11 @@
   .status-ed.aberta::before{background:#2E8A4C}
   .status-ed.encerrada{background:#FDECEA;color:#A3201B}
   .status-ed.encerrada::before{background:#B42318}
+  .status-ed.publicada{background:#E3EEFB;color:#1F4E8C}
+  .status-ed.publicada::before{background:#1F5FBF}
+  .opcao-confirmar{display:flex;align-items:flex-start;gap:10px;margin:4px 0 0;padding:12px 14px;border-radius:12px;background:#F4F6F1;font-size:14px;line-height:1.45;cursor:pointer}
+  .opcao-confirmar input{width:18px;height:18px;margin-top:1px;flex:0 0 auto;accent-color:#15180F}
+  .opcao-confirmar[hidden]{display:none}
   .ed-acoes{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
   .ed-acoes [hidden]{display:none}
   .form-ano{display:inline-flex;gap:8px;align-items:center}
@@ -264,6 +269,7 @@
               </form>
               <button class="btn btn-ok btn-ed" id="btn-abrir" type="button" hidden>Abrir votação</button>
               <button class="btn btn-perigo btn-ed" id="btn-encerrar" type="button" hidden>Encerrar votação</button>
+              <button class="btn btn-ok btn-ed" id="btn-publicar" type="button" hidden>Publicar resultados</button>
             </div>
           </div>
         </li>
@@ -276,6 +282,10 @@
   <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="titulo-confirmar" aria-describedby="texto-confirmar">
     <h2 id="titulo-confirmar"></h2>
     <p id="texto-confirmar"></p>
+    <label class="opcao-confirmar" id="opcao-confirmar" hidden>
+      <input type="checkbox" id="chk-confirmar">
+      <span id="texto-opcao"></span>
+    </label>
     <div class="modal-rodape">
       <button class="btn btn-claro" type="button" data-fechar>Cancelar</button>
       <button class="btn btn-ok" type="button" id="btn-confirmar">Confirmar</button>
@@ -343,11 +353,15 @@ function avisar(msg, erro = false) {
 }
 
 /* ---------------- confirmação ---------------- */
-function confirmar({ titulo, texto, rotulo, perigo = false }) {
+// opcao: texto de uma caixinha opcional no modal (lida depois em $('chk-confirmar').checked)
+function confirmar({ titulo, texto, rotulo, perigo = false, opcao = '' }) {
   return new Promise((resolve) => {
     ultimoFoco = document.activeElement;
     $('titulo-confirmar').textContent = titulo;
     $('texto-confirmar').textContent = texto;
+    $('opcao-confirmar').hidden = !opcao;
+    $('texto-opcao').textContent = opcao;
+    $('chk-confirmar').checked = false;
     const b = $('btn-confirmar');
     b.textContent = rotulo;
     b.className = 'btn ' + (perigo ? 'btn-perigo' : 'btn-ok');
@@ -375,7 +389,8 @@ document.addEventListener('keydown', (e) => {
 const STATUS = {
   fechada:   { selo: 'Fechada',   texto: 'Defina o ano, confira participantes e categorias e abra quando estiver tudo pronto.' },
   aberta:    { selo: 'Aberta',    texto: 'Categorias e números dos participantes ficam travados até você encerrar.' },
-  encerrada: { selo: 'Encerrada', texto: 'O resultado está congelado no histórico. Comece um novo ano para votar de novo.' },
+  encerrada: { selo: 'Encerrada', texto: 'Resultado congelado e visível só para admins. Apresente na cerimônia e publique para liberar para todos.' },
+  publicada: { selo: 'Publicada', texto: 'Resultados liberados para todos. O admin do novo ano começa a próxima edição.' },
 };
 
 function render(r) {
@@ -397,7 +412,9 @@ function render(r) {
     $('votaram').innerHTML = `${r.votaram} <small>de ${r.eleitores}</small>`;
     $('votaram-rotulo').textContent = 'já votaram';
   } else {
-    $('ap-sub').textContent = `Votação encerrada · resultado final de ${ano}.`;
+    $('ap-sub').textContent = status === 'publicada'
+      ? `Resultados de ${ano} publicados para todos.`
+      : `Votação encerrada · só admins veem até publicar.`;
     $('votaram').innerHTML = `${r.votaram} <small>de ${r.eleitores}</small>`;
     $('votaram-rotulo').textContent = 'votaram';
   }
@@ -409,12 +426,14 @@ function render(r) {
   $('ed-texto').textContent = s.texto;
   $('btn-abrir').hidden = status !== 'fechada';
   $('btn-encerrar').hidden = status !== 'aberta';
-  $('form-ano').hidden = status === 'aberta';
-  $('btn-ano').textContent = status === 'encerrada' ? 'Começar novo ano' : 'Definir ano';
-  if (document.activeElement !== $('campo-ano')) $('campo-ano').value = status === 'encerrada' ? ano + 1 : ano;
+  $('btn-publicar').hidden = status !== 'encerrada';
+  // ano: "Definir ano" com a votação fechada; "Começar novo ano" só depois de publicar
+  $('form-ano').hidden = status === 'aberta' || status === 'encerrada';
+  $('btn-ano').textContent = status === 'publicada' ? 'Começar novo ano' : 'Definir ano';
+  if (document.activeElement !== $('campo-ano')) $('campo-ano').value = status === 'publicada' ? ano + 1 : ano;
 }
 
-// Encerrada: quem vira admin no novo ano (vencedor do GGC Of The Year), ou empate a desempatar pelo dev
+// Encerrada: quem recebe o bastão de admin ao publicar (vencedor do GGC Of The Year), ou empate a desempatar pelo dev
 const nomeCurto = (p) => p.apelido || p.nome;
 function renderGgc(g) {
   estado.ggc = g;
@@ -426,24 +445,24 @@ function renderGgc(g) {
   $('form-desempate').hidden = true;
   estado.travaAno = false;
   if (g.vencedor) {
-    $('ed-ggc-texto').innerHTML = `🏆 <strong>${esc(nomeCurto(g.vencedor))}</strong> venceu o GGC Of The Year de ${g.ano} e vira o admin ao começar o novo ano. O admin atual volta a ser votante.`;
+    $('ed-ggc-texto').innerHTML = `🏆 <strong>${esc(nomeCurto(g.vencedor))}</strong> venceu o GGC Of The Year de ${g.ano} e vira o admin ao publicar os resultados. O admin atual volta a ser votante.`;
   } else if (empatados.length > 1) {
     $('ed-ggc-texto').innerHTML = `<strong>Empate no GGC Of The Year:</strong> ${empatados.map((p) => esc(nomeCurto(p))).join(', ')}. ` +
-      (estado.souDev ? 'Escolha o vencedor para liberar o novo ano.' : 'O dev precisa escolher o vencedor antes de começar o novo ano.');
+      (estado.souDev ? 'Escolha o vencedor para liberar a publicação.' : 'O dev precisa escolher o vencedor antes de publicar.');
     estado.travaAno = true;
     if (estado.souDev) {
       $('campo-desempate').innerHTML = empatados.map((p) => `<option value="${esc(p.id)}">${esc(p.nome)}${p.apelido ? ` (${esc(p.apelido)})` : ''}</option>`).join('');
       $('form-desempate').hidden = false;
     }
   } else {
-    $('ed-ggc-texto').textContent = `O GGC Of The Year de ${g.ano} não teve votos: o admin continua o mesmo no novo ano.`;
+    $('ed-ggc-texto').textContent = `O GGC Of The Year de ${g.ano} não teve votos: o admin continua o mesmo depois de publicar.`;
   }
   aplicarTravaAno();
 }
-// empate sem desempate trava o "Começar novo ano" (o banco também recusa)
+// empate sem desempate trava o "Publicar resultados" (o banco também recusa)
 function aplicarTravaAno() {
-  $('btn-ano').disabled = estado.ocupado || estado.travaAno;
-  $('btn-ano').title = estado.travaAno ? 'Desempate o GGC Of The Year primeiro.' : '';
+  $('btn-publicar').disabled = estado.ocupado || estado.travaAno;
+  $('btn-publicar').title = estado.travaAno ? 'Desempate o GGC Of The Year primeiro.' : '';
 }
 
 async function recarregar() {
@@ -495,20 +514,49 @@ $('btn-encerrar').addEventListener('click', async () => {
   if (ok) executar(() => api.rpc('encerrar_votacao'), 'Votação encerrada e apuração salva.');
 });
 
+$('btn-publicar').addEventListener('click', async () => {
+  const { ano } = estado.eleicao;
+  const venc = estado.ggc && estado.ggc.vencedor;
+  const ok = await confirmar({
+    titulo: `Publicar os resultados de ${ano}?`,
+    texto: 'Todos os participantes passam a ver o resultado na apuração. ' +
+      (venc ? `${nomeCurto(venc)} recebe o bastão de admin e você volta a ser votante (quem é dev continua dev). ` : '') +
+      'Não dá para desfazer.',
+    rotulo: 'Publicar resultados',
+  });
+  if (!ok || estado.ocupado) return;
+  estado.ocupado = true;
+  document.querySelectorAll('.btn-ed').forEach((b) => { b.disabled = true; });
+  try {
+    await api.rpc('publicar_resultados');
+    // o papel pode ter mudado: recarrega a página e a guarda manda cada um para a tela certa
+    location.reload();
+  } catch (err) {
+    console.error(err);
+    avisar(GGC.msgErro(err, 'Não deu para publicar. Tente de novo.'), true);
+    estado.ocupado = false;
+    document.querySelectorAll('.btn-ed').forEach((b) => { b.disabled = false; });
+    await recarregar();
+  }
+});
+
 $('form-ano').addEventListener('submit', async (e) => {
   e.preventDefault();
   const novo = parseInt($('campo-ano').value, 10);
   const { ano, status } = estado.eleicao;
+  const novoAno = status === 'publicada';
   if (!Number.isInteger(novo) || novo < 2000 || novo > 2100) { avisar('Coloque um ano entre 2000 e 2100.', true); return; }
-  if (novo === ano && status !== 'encerrada') { avisar(`A edição já é ${ano}.`); return; }
-  const venc = status === 'encerrada' && estado.ggc && estado.ggc.vencedor;
+  if (novo === ano && !novoAno) { avisar(`A edição já é ${ano}.`); return; }
   const ok = await confirmar({
-    titulo: status === 'encerrada' ? `Começar ${novo}?` : `Mudar o ano para ${novo}?`,
-    texto: `A edição passa para ${novo} e a votação fica fechada. O resultado de anos encerrados continua no histórico.` +
-      (venc ? ` ${nomeCurto(venc)} vira o admin e o admin atual volta a ser votante.` : ''),
-    rotulo: status === 'encerrada' ? 'Começar novo ano' : 'Mudar ano',
+    titulo: novoAno ? `Começar ${novo}?` : `Mudar o ano para ${novo}?`,
+    texto: `A edição passa para ${novo} e a votação fica fechada. O resultado de anos anteriores continua no histórico.`,
+    rotulo: novoAno ? 'Começar novo ano' : 'Mudar ano',
+    opcao: novoAno ? 'Limpar todas as categorias e montar do zero (sem marcar, as categorias atuais continuam para você editar).' : '',
   });
-  if (ok) executar(() => api.rpc('definir_ano', { p_ano: novo }), `Edição ${novo} pronta.`);
+  if (!ok) return;
+  const limpar = novoAno && $('chk-confirmar').checked;
+  executar(() => api.rpc('definir_ano', { p_ano: novo, p_limpar_categorias: limpar }),
+    limpar ? `Edição ${novo} pronta. Monte as categorias do zero.` : `Edição ${novo} pronta.`);
 });
 
 $('form-desempate').addEventListener('submit', async (e) => {
@@ -518,7 +566,7 @@ $('form-desempate').addEventListener('submit', async (e) => {
   if (!p) return;
   const ok = await confirmar({
     titulo: `${nomeCurto(p)} é o GGC Of The Year de ${estado.ggc.ano}?`,
-    texto: `${p.nome} vira o vencedor do desempate e será o admin ao começar o novo ano. Não dá para trocar depois.`,
+    texto: `${p.nome} vira o vencedor do desempate e recebe o bastão de admin quando os resultados forem publicados. Não dá para trocar depois.`,
     rotulo: 'Definir vencedor',
   });
   if (ok) executar(() => api.rpc('desempatar', { p_conta: id }), `${nomeCurto(p)} definido como vencedor.`);

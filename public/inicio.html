@@ -61,6 +61,10 @@
   .selo.aberta::before{animation:pulsa 1.6s ease-in-out infinite}
   .selo.votou{background:var(--amarelo);--ponto:var(--marinho)}
   .selo.encerrada{--ponto:#B42318}
+  .selo.publicada{background:var(--amarelo);--ponto:var(--marinho)}
+  .link-resultados{color:#fff;font-size:15px;font-weight:800;text-decoration:underline;text-underline-offset:4px}
+  .link-resultados[hidden]{display:none}
+  .link-resultados:focus-visible{outline:3px solid #fff;outline-offset:3px;border-radius:6px}
   @keyframes pulsa{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.75)}}
 
   .ano{display:block;margin-top:12px;font-family:'Lilita One',Nunito,sans-serif;font-size:30px;letter-spacing:.12em;color:#fff;text-shadow:0 3px 0 var(--marinho)}
@@ -130,6 +134,11 @@
       <li><b id="qtd-minutos">–</b><span>minutos</span></li>
     </ul>
 
+    <a class="acao btn-votar" id="btn-ver-resultados" href="admin-apuracao.html" hidden>
+      Ver resultados
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+    </a>
+
     <a class="acao btn-votar" id="btn-votar" href="urna-eletronica.html" hidden>
       Começar a votar
       <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
@@ -142,6 +151,7 @@
     </button>
 
     <p class="dica" id="dica"></p>
+    <a class="link-resultados" id="link-resultados" href="admin-apuracao.html" hidden>Ver resultados de anos anteriores</a>
   </section>
 </main>
 
@@ -153,7 +163,9 @@
      fechada   → admin ainda não abriu: botão desabilitado
      aberta    → botão "Começar a votar" leva para a urna
      votou     → a pessoa já votou: botão desabilitado "Voto registrado"
-     encerrada → admin encerrou: botão desabilitado
+     encerrada → admin encerrou: botão desabilitado (resultado só depois da cerimônia)
+     publicada → admin publicou: botão "Ver resultados" leva para a apuração
+   Link "Ver resultados de anos anteriores" aparece quando existe algum ano publicado.
 
    Fonte: tabela "eleicao" (1 linha), rpc ja_votei(), categorias e rpc candidatos_urna().
    Esconder o botão é só UX: quem barra voto fora de hora é a função votar() no banco.
@@ -168,9 +180,10 @@ const api = MODO_TESTE ? {
   async usuario() { return { nome: 'Ana Beatriz Lima', apelido: 'Bia' }; },
   async eleicao() {
     const p = new URLSearchParams(location.search).get('estado');
-    return { ano: 2026, status: ['fechada', 'aberta', 'encerrada'].includes(p) ? p : 'fechada' };
+    return { ano: 2026, status: ['fechada', 'aberta', 'encerrada', 'publicada'].includes(p) ? p : 'fechada' };
   },
   async jaVotou() { return new URLSearchParams(location.search).get('estado') === 'votou'; },
+  async temResultados() { return false; },
   async resumo() { return { categorias: 7, candidatos: 18 }; },
   observar() {},
   async sair() {},
@@ -184,6 +197,12 @@ const api = MODO_TESTE ? {
     const { data, error } = await sb.rpc('ja_votei');
     if (error) throw error;
     return !!data;
+  },
+  // votantes só enxergam (RLS) edições com resultado publicado
+  async temResultados() {
+    const { count, error } = await sb.from('edicoes').select('ano', { count: 'exact', head: true });
+    if (error) throw error;
+    return (count || 0) > 0;
   },
   async resumo() {
     const [c, k] = await Promise.all([
@@ -234,15 +253,24 @@ const ESTADOS = {
     icone: 'cadeado',
     infos: false,
   },
+  publicada: {
+    selo: 'Resultados publicados',
+    mensagem: 'Os vencedores foram revelados! Confira o resultado completo de cada categoria.',
+    dica: 'Os anos anteriores também ficam lá, no seletor de ano.',
+    infos: false,
+  },
 };
 
-const estado = { status: 'fechada', votou: false, ano: null };
+const estado = { status: 'fechada', votou: false, ano: null, temResultados: false };
 const $ = (id) => document.getElementById(id);
 
 function render() {
-  const chave = estado.votou ? 'votou' : estado.status;
+  // depois de encerrar/publicar vale o status da votação; antes disso, "já votou" tem prioridade
+  const fimDaVotacao = estado.status === 'encerrada' || estado.status === 'publicada';
+  const chave = !fimDaVotacao && estado.votou ? 'votou' : estado.status;
   const e = ESTADOS[chave] || ESTADOS.fechada;
   const aberta = chave === 'aberta';
+  const publicada = chave === 'publicada';
 
   $('selo').className = `selo ${chave}`;
   $('selo').textContent = e.selo;
@@ -251,7 +279,9 @@ function render() {
   $('dica').textContent = e.dica;
 
   $('btn-votar').hidden = !aberta;
-  $('btn-bloqueado').hidden = aberta;
+  $('btn-ver-resultados').hidden = !publicada;
+  $('btn-bloqueado').hidden = aberta || publicada;
+  $('link-resultados').hidden = publicada || !estado.temResultados;
   $('btn-bloqueado').dataset.icone = e.icone || '';
   $('rotulo-bloqueado').textContent = e.rotulo || '';
 
@@ -262,8 +292,8 @@ function render() {
 $('btn-sair').addEventListener('click', async () => { await api.sair(); location.href = 'login.html'; });
 
 async function atualizarEstado() {
-  const [el, votou] = await Promise.all([api.eleicao(), api.jaVotou()]);
-  Object.assign(estado, { status: el.status, ano: el.ano, votou });
+  const [el, votou, temResultados] = await Promise.all([api.eleicao(), api.jaVotou(), api.temResultados()]);
+  Object.assign(estado, { status: el.status, ano: el.ano, votou, temResultados });
 }
 
 (async function iniciar() {

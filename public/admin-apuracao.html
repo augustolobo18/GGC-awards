@@ -173,8 +173,8 @@
   <div class="wrap">
     <header class="topo">
       <div>
-        <a class="sobre voltar" href="admin-menu.html">← GGC Awards · Admin</a>
-        <h1>Apuração</h1>
+        <a class="sobre voltar" id="voltar" href="admin-menu.html">← GGC Awards · Admin</a>
+        <h1 id="titulo-pagina">Apuração</h1>
       </div>
       <div class="status-topo">
         <label class="ano-box" id="bloco-ano" hidden>Ano
@@ -190,7 +190,7 @@
 
     <section class="nao-abriu" id="nao-abriu" hidden>
       <svg aria-hidden="true" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#FFC21A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-      <h2>A votação ainda não abriu</h2>
+      <h2 id="nao-abriu-titulo">A votação ainda não abriu</h2>
       <p id="nao-abriu-texto">Quando a votação for aberta no menu admin, a apuração aparece aqui ao vivo.</p>
     </section>
 
@@ -255,11 +255,12 @@
 const SEM_NOME = { id: 'removido', numero: '', nome: 'Participante removido', apelido: '', foto_url: null };
 
 const api = {
-  // ano e status atuais + anos já encerrados (decide o que a tela mostra)
+  // ano e status atuais + anos já encerrados (decide o que a tela mostra).
+  // Votante só recebe (RLS) as edições com resultado publicado.
   async situacao() {
     const [el, edicoes] = await Promise.all([
       sb.from('eleicao').select('ano, status').eq('id', 1).single(),
-      sb.from('edicoes').select('ano').order('ano', { ascending: false }),
+      sb.from('edicoes').select('ano, publicada_em').order('ano', { ascending: false }),
     ]);
     for (const r of [el, edicoes]) if (r.error) throw r.error;
     return { ano: el.data.ano, status: el.data.status, anos: edicoes.data.map((e) => e.ano) };
@@ -291,7 +292,7 @@ const api = {
 
   async congelado(ano) {
     const [ed, ap] = await Promise.all([
-      sb.from('edicoes').select('ano, eleitores, votaram, encerrada_em').eq('ano', ano).single(),
+      sb.from('edicoes').select('ano, eleitores, votaram, encerrada_em, publicada_em').eq('ano', ano).single(),
       sb.from('apuracoes').select('categoria_ordem, categoria_titulo, principal, tipo, numero, nome, apelido, foto_url, votos').eq('ano', ano),
     ]);
     if (ed.error) throw ed.error;
@@ -306,6 +307,7 @@ const api = {
       status: 'encerrada',
       aoVivo: false,
       encerradaEm: ed.data.encerrada_em,
+      publicadaEm: ed.data.publicada_em,
       categorias: [...cats.values()].sort((a, b) => a.ordem - b.ordem),
       apuracao: ap.data.map((a) => ({
         categoria_id: chave(a), tipo: a.tipo, votos: a.votos,
@@ -331,7 +333,7 @@ const REGRAS = {
   sem: (c) => !c.temVotos,
 };
 
-const estado = { dados: null, anos: [], anoAtual: null, statusAtual: null, anoSel: 'atual', busca: '', filtro: 'todas', carregando: false, pendente: false };
+const estado = { admin: false, dados: null, anos: [], anoAtual: null, statusAtual: null, anoSel: 'atual', busca: '', filtro: 'todas', carregando: false, pendente: false };
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
@@ -478,11 +480,14 @@ function renderCategorias() {
   $('nada').hidden = visiveis.length > 0;
 }
 
-// Só o ano no seletor (o status aparece ao lado). Ano atual + anos anteriores
-// (encerrados e já trocados por "Começar novo ano"), mais recente primeiro.
+// O ano atual só fica liberado para votantes depois que o admin publica os resultados
+const atualLiberado = () => estado.admin || (estado.statusAtual === 'publicada' && estado.anos.includes(estado.anoAtual));
+
+// Só o ano no seletor (o status aparece ao lado). Ano atual + anos anteriores, mais recente primeiro.
+// Para votantes, o ano atual aparece desabilitado enquanto o resultado não for publicado.
 function renderAnos() {
   const anteriores = estado.anos.filter((a) => a !== estado.anoAtual).sort((a, b) => b - a);
-  const opcoes = [`<option value="atual">${estado.anoAtual}</option>`]
+  const opcoes = [`<option value="atual"${atualLiberado() ? '' : ' disabled'}>${estado.anoAtual}</option>`]
     .concat(anteriores.map((a) => `<option value="${a}">${a}</option>`));
   $('ano').innerHTML = opcoes.join('');
   $('ano').value = estado.anoSel;
@@ -497,9 +502,15 @@ function render() {
   $('nao-abriu').hidden = !d.naoAbriu;
   $('resultado').hidden = !!d.naoAbriu;
   if (d.naoAbriu) {
-    $('nao-abriu-texto').textContent = estado.anos.some((a) => a !== d.ano)
-      ? `Quando a votação de ${d.ano} for aberta no menu admin, a apuração aparece aqui ao vivo. Os anos anteriores estão no seletor de ano.`
-      : `Quando a votação de ${d.ano} for aberta no menu admin, a apuração aparece aqui ao vivo.`;
+    if (d.semPublicados) {
+      $('nao-abriu-titulo').textContent = 'Nenhum resultado publicado ainda';
+      $('nao-abriu-texto').textContent = 'Os resultados aparecem aqui depois que o admin apresentar na cerimônia e publicar.';
+    } else {
+      $('nao-abriu-titulo').textContent = 'A votação ainda não abriu';
+      $('nao-abriu-texto').textContent = estado.anos.some((a) => a !== d.ano)
+        ? `Quando a votação de ${d.ano} for aberta no menu admin, a apuração aparece aqui ao vivo. Os anos anteriores estão no seletor de ano.`
+        : `Quando a votação de ${d.ano} for aberta no menu admin, a apuração aparece aqui ao vivo.`;
+    }
     return;
   }
   renderComparecimento(d);
@@ -511,12 +522,17 @@ function render() {
 /* ---------------- carregar ---------------- */
 function legenda(d) {
   $('atualizado').classList.toggle('final', !d.aoVivo);
-  if (d.naoAbriu) {
+  const data = (iso) => new Date(iso).toLocaleDateString('pt-BR');
+  if (d.semPublicados) {
+    $('atualizado').textContent = 'Ainda não há resultados publicados';
+  } else if (d.naoAbriu) {
     $('atualizado').textContent = `${d.ano} · votação ainda não abriu`;
   } else if (d.aoVivo) {
     $('atualizado').textContent = `Ao vivo · atualizado às ${new Date().toLocaleTimeString('pt-BR')}`;
+  } else if (d.publicadaEm) {
+    $('atualizado').textContent = `Votação encerrada · resultado de ${d.ano} publicado em ${data(d.publicadaEm)}`;
   } else if (d.encerradaEm) {
-    $('atualizado').textContent = `Votação encerrada · resultado final de ${d.ano} · ${new Date(d.encerradaEm).toLocaleDateString('pt-BR')}`;
+    $('atualizado').textContent = `Votação encerrada · só admins veem até publicar · ${data(d.encerradaEm)}`;
   } else {
     $('atualizado').textContent = `Votação encerrada · resultado final de ${d.ano}`;
   }
@@ -534,14 +550,22 @@ async function recarregar() {
     estado.anos = sit.anos;
     if (estado.anoSel !== 'atual' && !sit.anos.includes(Number(estado.anoSel))) estado.anoSel = 'atual';
 
+    // votante: ano atual não publicado fica bloqueado -> cai no ano publicado mais recente
+    if (!atualLiberado() && estado.anoSel === 'atual') {
+      const anteriores = sit.anos.filter((a) => a !== sit.ano).sort((a, b) => b - a);
+      if (anteriores.length) estado.anoSel = String(anteriores[0]);
+    }
+
     if (estado.anoSel !== 'atual') {
       estado.dados = await api.congelado(Number(estado.anoSel));
+    } else if (!atualLiberado()) {
+      estado.dados = { ano: sit.ano, status: sit.status, naoAbriu: true, semPublicados: true, aoVivo: false };
     } else if (sit.status === 'fechada') {
       estado.dados = { ano: sit.ano, status: sit.status, naoAbriu: true, aoVivo: false };
-    } else if (sit.status === 'encerrada' && sit.anos.includes(sit.ano)) {
+    } else if ((sit.status === 'encerrada' || sit.status === 'publicada') && sit.anos.includes(sit.ano)) {
       estado.dados = await api.congelado(sit.ano);   // resultado final congelado no encerramento
     } else {
-      estado.dados = await api.aoVivo(sit);          // aberta (ao vivo)
+      estado.dados = await api.aoVivo(sit);          // aberta (ao vivo, só admin)
     }
     renderAnos();
     render();
@@ -557,7 +581,7 @@ async function recarregar() {
 }
 
 // só a votação aberta do ano atual se atualiza (sozinha ou pelo botão)
-const aoVivoAgora = () => estado.anoSel === 'atual' && estado.statusAtual === 'aberta';
+const aoVivoAgora = () => estado.admin && estado.anoSel === 'atual' && estado.statusAtual === 'aberta';
 
 /* ---------------- eventos ---------------- */
 $('btn-atualizar').addEventListener('click', () => { if (aoVivoAgora()) recarregar(); });
@@ -579,7 +603,15 @@ $('btn-limpar').addEventListener('click', () => {
 
 /* ---------------- início ---------------- */
 (async function iniciar() {
-  await GGC.exigirSessao({ roles: ['admin', 'dev'] });
+  // todos entram: votantes veem só anos com resultado publicado (o banco garante via RLS)
+  const { conta } = await GGC.exigirSessao();
+  estado.admin = conta.role === 'admin' || conta.role === 'dev';
+  if (!estado.admin) {
+    $('voltar').href = 'inicio.html';
+    $('voltar').textContent = '← GGC Awards';
+    document.title = 'Resultados · GGC Awards';
+    $('titulo-pagina').textContent = 'Resultados';
+  }
   await recarregar();
 
   // voto novo (comparecimento): recarrega só com a votação aberta.
