@@ -161,13 +161,13 @@
               </span>
               <span class="ap-txt">
                 <b>Apuração</b>
-                <span>Resultado ao vivo do GGC Of The Year e de cada categoria.</span>
+                <span id="ap-sub">Resultado ao vivo do GGC Of The Year e de cada categoria.</span>
               </span>
             </span>
             <span class="ap-dir">
               <span class="ap-num">
                 <b id="votaram">– <small>de –</small></b>
-                <span>já votaram</span>
+                <span id="votaram-rotulo">já votaram</span>
               </span>
               <span class="ap-seta seta" aria-hidden="true">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
@@ -369,7 +369,20 @@ function render(r) {
   $('qtd-categorias').textContent = r.categorias;
   $('pendentes').hidden = !r.pendentes;
   $('pendentes').textContent = r.pendentes === 1 ? '1 aguardando' : `${r.pendentes} aguardando`;
-  $('votaram').innerHTML = `${r.votaram} <small>de ${r.eleitores}</small>`;
+  // prévia da apuração: números só com a votação aberta ou encerrada
+  if (status === 'fechada') {
+    $('ap-sub').textContent = `A votação de ${ano} ainda não abriu.`;
+    $('votaram').innerHTML = `<small>Não abriu</small>`;
+    $('votaram-rotulo').textContent = '';
+  } else if (status === 'aberta') {
+    $('ap-sub').textContent = 'Resultado ao vivo do GGC Of The Year e de cada categoria.';
+    $('votaram').innerHTML = `${r.votaram} <small>de ${r.eleitores}</small>`;
+    $('votaram-rotulo').textContent = 'já votaram';
+  } else {
+    $('ap-sub').textContent = `Votação encerrada · resultado final de ${ano}.`;
+    $('votaram').innerHTML = `${r.votaram} <small>de ${r.eleitores}</small>`;
+    $('votaram-rotulo').textContent = 'votaram';
+  }
 
   const s = STATUS[status] || STATUS.fechada;
   $('ed-ano').textContent = ano;
