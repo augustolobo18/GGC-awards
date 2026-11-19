@@ -85,5 +85,4 @@ public/    site estático (páginas + js/config.js, supabase.js, auth.js)
 supabase/  SQL numerado + 99_checks.sql
 context/   documentação de contexto do projeto
 plans/     planos de implementação
-temp/      designs de referência (não publicar)
 ```
