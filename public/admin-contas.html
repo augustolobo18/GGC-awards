@@ -199,12 +199,12 @@
 
     <div class="info">
       <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#15180F" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-      <span><strong>Só e-mails desta lista conseguem criar conta.</strong> Quem foi adicionado e ainda não se cadastrou aparece como “Aguardando cadastro”. Quem tem número é candidato em todas as categorias. O papel vale a partir do próximo login.</span>
+      <span><strong>Só e-mails desta lista conseguem criar conta.</strong> Quem foi adicionado e ainda não se cadastrou aparece como “Aguardando cadastro”. Quem tem número é candidato em todas as categorias, menos o admin no GGC Of The Year. O admin é o vencedor do GGC Of The Year do ano anterior e muda sozinho ao começar um novo ano; só o dev troca papéis manualmente.</span>
     </div>
 
     <div class="info aviso" id="aviso-aberta" hidden>
       <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6E4A00" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5v.01"/></svg>
-      <span><strong>Votação aberta.</strong> Números e remoções ficam travados até o encerramento. Nome, apelido, foto e papel continuam editáveis.</span>
+      <span><strong>Votação aberta.</strong> Números e remoções ficam travados até o encerramento. Nome, apelido e foto continuam editáveis.</span>
     </div>
 
     <section class="card" aria-label="Lista de participantes">
@@ -385,6 +385,7 @@ const AJUDA_FOTO = 'No celular abre a galeria ou a câmera. JPG, PNG ou WEBP de 
 
 const estado = {
   euId: '',
+  souDev: false,
   status: 'fechada',
   contas: [],
   busca: '',
@@ -442,6 +443,8 @@ function travaDe(c) {
   if (c.role === 'admin' && !estado.contas.some((x) => x.id !== c.id && ehAdmin(x))) return 'Precisa ter pelo menos um admin.';
   return '';
 }
+const SO_DEV_PAPEL = 'Só o dev troca papéis. O admin muda sozinho: é o vencedor do GGC Of The Year do ano anterior.';
+const travaPapel = (c) => travaDe(c) || (!estado.souDev ? SO_DEV_PAPEL : '');
 const travaRemocao = (c) => travaDe(c) || (aberta() ? 'Com a votação aberta não dá para remover participantes.' : '');
 
 /* ---------------- lista ---------------- */
@@ -484,7 +487,7 @@ function render() {
   }
 
   $('lista').innerHTML = lista.map((c) => {
-    const trava = travaDe(c);
+    const trava = travaPapel(c);
     const travaRem = travaRemocao(c);
     const pessoa = esc(nomeDe(c));
     const papeis = c.role === 'dev'
@@ -526,7 +529,7 @@ function render() {
 /* ---------------- mudar papel ---------------- */
 async function trocarPapel(id, role, { silencioso = false } = {}) {
   const c = estado.contas.find((x) => x.id === id);
-  if (!c || c.role === role || travaDe(c)) return;
+  if (!c || c.role === role || travaPapel(c)) return;
   const antes = c.role;
   try {
     const nova = await api.atualizar(id, { role });
@@ -564,9 +567,10 @@ function abrirForm(c) {
   estado.form = c
     ? { modo: 'editar', id: c.id, ativo: ativo(c), email: c.email, nome: c.nome || '', apelido: c.apelido || '', numero: c.numero || '',
         role: c.role, roleOriginal: c.role, foto_url: c.foto_url || '', fotoArquivo: null, fotoPrevia: c.foto_url || '',
-        dev, trava: travaDe(c) }
+        dev, trava: travaPapel(c) }
     : { modo: 'novo', id: null, ativo: false, email: '', nome: '', apelido: '', numero: '',
-        role: 'votante', roleOriginal: 'votante', foto_url: '', fotoArquivo: null, fotoPrevia: '', dev: false, trava: '' };
+        role: 'votante', roleOriginal: 'votante', foto_url: '', fotoArquivo: null, fotoPrevia: '', dev: false,
+        trava: estado.souDev ? '' : SO_DEV_PAPEL };
   const f = estado.form;
   $('titulo-form').textContent = c ? 'Editar participante' : 'Novo participante';
   $('btn-salvar').textContent = c ? 'Salvar alterações' : 'Cadastrar';
@@ -622,12 +626,12 @@ function renderForm() {
 
   document.querySelectorAll('[data-papel-novo]').forEach((b) => {
     b.setAttribute('aria-pressed', String(b.dataset.papelNovo === f.role));
-    b.disabled = !!f.trava && f.modo === 'editar';
+    b.disabled = !!f.trava;
   });
-  $('descricao-papel').textContent = f.trava && f.modo === 'editar'
+  $('descricao-papel').textContent = f.trava
     ? f.trava
     : f.role === 'admin'
-      ? 'Admin vota e também gerencia participantes, categorias e a edição.'
+      ? 'Admin vota, gerencia participantes, categorias e a edição, e não pode ser votado no GGC Of The Year.'
       : 'Votante só entra, vota na urna e pronto.';
 
   $('previa').innerHTML = `
@@ -791,6 +795,7 @@ document.addEventListener('keydown', (e) => {
 (async function iniciar() {
   const { conta } = await GGC.exigirSessao({ roles: ['admin', 'dev'] });
   estado.euId = conta.id;
+  estado.souDev = conta.role === 'dev';
   try {
     const [status, contas] = await Promise.all([api.status(), api.listar()]);
     estado.status = status;

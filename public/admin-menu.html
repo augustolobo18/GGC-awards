@@ -100,6 +100,11 @@
   .ed-acoes{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
   .ed-acoes [hidden]{display:none}
   .form-ano{display:inline-flex;gap:8px;align-items:center}
+  .ed-ggc{display:flex;flex-direction:column;gap:10px;padding:12px 14px;border-radius:12px;background:#FFF4D6;color:#5A3D00;font-size:14px;line-height:1.45}
+  .ed-ggc.ok{background:#E6F4EA;color:#1E4D2E}
+  .ed-ggc[hidden],.form-desempate[hidden]{display:none}
+  .form-desempate{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .form-desempate select{min-width:200px;width:auto}
   .campo-ano{width:110px;height:46px;padding:0 12px;border:1.5px solid var(--borda);border-radius:10px;font:600 16px Inter,sans-serif;color:var(--ink);background:#FAFBF8}
   .campo-ano:focus{outline:none;border-color:var(--foco);box-shadow:0 0 0 3px rgba(31,95,191,.18)}
   .btn{min-height:46px;padding:0 20px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:background .15s,transform .06s}
@@ -243,6 +248,14 @@
               <b id="ed-titulo">Edição <span id="ed-ano">–</span></b>
               <span id="ed-texto"></span>
             </span>
+            <div class="ed-ggc" id="ed-ggc" hidden>
+              <span id="ed-ggc-texto"></span>
+              <form class="form-desempate" id="form-desempate" hidden novalidate>
+                <label class="sr" for="campo-desempate">Vencedor do desempate</label>
+                <select class="campo-ano" id="campo-desempate"></select>
+                <button class="btn btn-ok btn-ed" type="submit">Definir vencedor</button>
+              </form>
+            </div>
             <div class="ed-acoes">
               <form class="form-ano" id="form-ano" novalidate>
                 <label class="sr" for="campo-ano">Ano da edição</label>
@@ -308,9 +321,14 @@ const api = {
     const { error } = await sb.rpc(nome, args);
     if (error) throw error;
   },
+  async situacaoGgc() {
+    const { data, error } = await sb.rpc('situacao_ggc');
+    if (error) throw error;
+    return data;
+  },
 };
 
-const estado = { eleicao: null, ocupado: false };
+const estado = { eleicao: null, ocupado: false, souDev: false, ggc: null, travaAno: false };
 let ultimoFoco = null;
 let timerToast;
 let resolverConfirmacao = null;
@@ -396,9 +414,44 @@ function render(r) {
   if (document.activeElement !== $('campo-ano')) $('campo-ano').value = status === 'encerrada' ? ano + 1 : ano;
 }
 
+// Encerrada: quem vira admin no novo ano (vencedor do GGC Of The Year), ou empate a desempatar pelo dev
+const nomeCurto = (p) => p.apelido || p.nome;
+function renderGgc(g) {
+  estado.ggc = g;
+  const caixa = $('ed-ggc');
+  if (!g) { caixa.hidden = true; estado.travaAno = false; aplicarTravaAno(); return; }
+  const empatados = g.empatados || [];
+  caixa.hidden = false;
+  caixa.classList.toggle('ok', !!g.vencedor);
+  $('form-desempate').hidden = true;
+  estado.travaAno = false;
+  if (g.vencedor) {
+    $('ed-ggc-texto').innerHTML = `🏆 <strong>${esc(nomeCurto(g.vencedor))}</strong> venceu o GGC Of The Year de ${g.ano} e vira o admin ao começar o novo ano. O admin atual volta a ser votante.`;
+  } else if (empatados.length > 1) {
+    $('ed-ggc-texto').innerHTML = `<strong>Empate no GGC Of The Year:</strong> ${empatados.map((p) => esc(nomeCurto(p))).join(', ')}. ` +
+      (estado.souDev ? 'Escolha o vencedor para liberar o novo ano.' : 'O dev precisa escolher o vencedor antes de começar o novo ano.');
+    estado.travaAno = true;
+    if (estado.souDev) {
+      $('campo-desempate').innerHTML = empatados.map((p) => `<option value="${esc(p.id)}">${esc(p.nome)}${p.apelido ? ` (${esc(p.apelido)})` : ''}</option>`).join('');
+      $('form-desempate').hidden = false;
+    }
+  } else {
+    $('ed-ggc-texto').textContent = `O GGC Of The Year de ${g.ano} não teve votos válidos: o admin continua o mesmo no novo ano.`;
+  }
+  aplicarTravaAno();
+}
+// empate sem desempate trava o "Começar novo ano" (o banco também recusa)
+function aplicarTravaAno() {
+  $('btn-ano').disabled = estado.ocupado || estado.travaAno;
+  $('btn-ano').title = estado.travaAno ? 'Desempate o GGC Of The Year primeiro.' : '';
+}
+
 async function recarregar() {
-  try { render(await api.resumo()); }
-  catch (e) { console.error(e); avisar('Não deu para carregar o resumo.', true); }
+  try {
+    const r = await api.resumo();
+    render(r);
+    renderGgc(r.eleicao.status === 'encerrada' ? await api.situacaoGgc() : null);
+  } catch (e) { console.error(e); avisar('Não deu para carregar o resumo.', true); }
 }
 
 /* ---------------- ações da edição ---------------- */
@@ -417,6 +470,7 @@ async function executar(fn, sucesso) {
   } finally {
     estado.ocupado = false;
     document.querySelectorAll('.btn-ed').forEach((b) => { b.disabled = false; });
+    aplicarTravaAno();
   }
 }
 
@@ -447,12 +501,27 @@ $('form-ano').addEventListener('submit', async (e) => {
   const { ano, status } = estado.eleicao;
   if (!Number.isInteger(novo) || novo < 2000 || novo > 2100) { avisar('Coloque um ano entre 2000 e 2100.', true); return; }
   if (novo === ano && status !== 'encerrada') { avisar(`A edição já é ${ano}.`); return; }
+  const venc = status === 'encerrada' && estado.ggc && estado.ggc.vencedor;
   const ok = await confirmar({
     titulo: status === 'encerrada' ? `Começar ${novo}?` : `Mudar o ano para ${novo}?`,
-    texto: `A edição passa para ${novo} e a votação fica fechada. O resultado de anos encerrados continua no histórico.`,
+    texto: `A edição passa para ${novo} e a votação fica fechada. O resultado de anos encerrados continua no histórico.` +
+      (venc ? ` ${nomeCurto(venc)} vira o admin e o admin atual volta a ser votante.` : ''),
     rotulo: status === 'encerrada' ? 'Começar novo ano' : 'Mudar ano',
   });
   if (ok) executar(() => api.rpc('definir_ano', { p_ano: novo }), `Edição ${novo} pronta.`);
+});
+
+$('form-desempate').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = $('campo-desempate').value;
+  const p = (estado.ggc && estado.ggc.empatados || []).find((x) => x.id === id);
+  if (!p) return;
+  const ok = await confirmar({
+    titulo: `${nomeCurto(p)} é o GGC Of The Year de ${estado.ggc.ano}?`,
+    texto: `${p.nome} vira o vencedor do desempate e será o admin ao começar o novo ano. Não dá para trocar depois.`,
+    rotulo: 'Definir vencedor',
+  });
+  if (ok) executar(() => api.rpc('desempatar', { p_conta: id }), `${nomeCurto(p)} definido como vencedor.`);
 });
 
 $('btn-sair').addEventListener('click', () => GGC.sair());
@@ -460,6 +529,7 @@ $('btn-sair').addEventListener('click', () => GGC.sair());
 /* ---------------- início ---------------- */
 (async function iniciar() {
   const { conta } = await GGC.exigirSessao({ roles: ['admin', 'dev'] });
+  estado.souDev = conta.role === 'dev';
   const primeiro = String(conta.apelido || conta.nome || '').trim().split(/\s+/)[0] || '';
   $('ola').textContent = primeiro ? `Olá, ${primeiro}` : 'Olá!';
   GGC.preencherAvatar($('iniciais'), conta, primeiro[0]);
