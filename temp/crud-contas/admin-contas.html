@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contas — GGC Awards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<!--
+  ADMIN ONLY. Para ligar no Supabase, inclua o client (ou importe via npm):
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  e troque as funções do objeto `api` no script abaixo.
+-->
+<style>
+  :root{
+    --bg:#E7E9E4; --ink:#15180F; --muted:#4F554B; --muted2:#3E423A; --card:#fff; --line:#E3E6DF; --line2:#EEF0EB;
+    --borda:#C9CEC3; --campo:#FAFBF8; --foco:#1F5FBF; --ok:#35A55A; --ok-sombra:#1B6332; --perigo:#B42318;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif}
+  button,input,textarea{font-family:inherit}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  .pagina{min-height:100vh;padding:32px 24px 64px}
+  .wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+
+  .topo{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 24px}
+  .topo .sobre{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  h1{margin:4px 0;font-family:'Space Grotesk',Inter,sans-serif;font-size:36px;line-height:1.1}
+  .resumo{font-size:15px;color:var(--muted)}
+
+  .info{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:14px;background:#fff;border:1.5px solid #D5DACF;font-size:14px;line-height:1.5;color:var(--muted2)}
+  .info svg{flex:0 0 auto;margin-top:1px}
+  .info strong{color:var(--ink)}
+
+  .btn{min-height:46px;padding:0 18px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:10px;
+    transition:background .15s,transform .06s}
+  .btn:active{transform:translateY(1px)}
+  .btn:focus-visible,.icone:focus-visible,.seg:focus-visible,.desfazer:focus-visible{outline:3px solid var(--foco);outline-offset:2px}
+  .btn-escuro{min-height:48px;padding:0 20px;border:0;border-radius:12px;background:var(--ink);color:#fff}
+  .btn-escuro:hover{background:#2A2E24}
+  .btn-claro{border:1.5px solid var(--borda);background:#fff;color:var(--ink)}
+  .btn-claro:hover{background:#F2F5F0}
+  .btn-ok{border:0;padding:0 22px;background:var(--ok);color:#0B1A0F;font-weight:700;box-shadow:0 3px 0 var(--ok-sombra)}
+  .btn-ok:hover{background:#2F9550}
+  .btn-ok:disabled{opacity:.7;cursor:wait}
+  .btn-perigo{border:0;background:var(--perigo);color:#fff;font-weight:700}
+  .btn-perigo:hover{background:#951B12}
+
+  /* card da lista */
+  .card{background:var(--card);border-radius:18px;box-shadow:0 10px 30px rgba(30,35,25,.10);overflow:hidden}
+  .barra{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
+  .busca-box{flex:1 1 280px;max-width:420px;position:relative;display:flex}
+  .busca-box svg{position:absolute;left:14px;top:13px}
+  .campo{width:100%;padding:0 14px;border:1.5px solid var(--borda);border-radius:10px;font-size:15px;color:var(--ink);background:var(--campo)}
+  .campo:focus{outline:none;border-color:var(--foco);box-shadow:0 0 0 3px rgba(31,95,191,.18)}
+  .campo.invalido{border-color:var(--perigo)}
+  .busca-box .campo{height:44px;padding-left:40px}
+  textarea.campo{padding:12px 14px;line-height:1.5;resize:vertical}
+  .filtro{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px;font-weight:600;color:var(--muted2)}
+
+  /* segmentado (filtros, papéis) */
+  .segmentos{display:inline-flex;flex-wrap:wrap;padding:4px;border-radius:12px;background:var(--line2);gap:4px}
+  .seg{min-height:36px;padding:0 12px;border:0;border-radius:9px;font-size:14px;font-weight:600;background:transparent;color:var(--muted);cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;gap:6px}
+  .seg .qtd{font-size:12px;font-weight:700;color:var(--muted)}
+  .seg[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(21,24,15,.15)}
+  .seg.admin[aria-pressed="true"]{background:var(--ink);color:#fff}
+  .seg:disabled{cursor:not-allowed;color:#9AA094}
+  .papeis{padding:3px;border-radius:10px;gap:3px}
+  .papeis .seg{min-height:34px;min-width:76px;font-size:13px;border-radius:8px}
+  .papeis-novo .seg{min-height:40px;min-width:100px;padding:0 16px}
+
+  .lista{max-height:660px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#B9BEB4 transparent}
+  .linha{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;padding:12px 20px;border-bottom:1px solid var(--line2);transition:background .15s}
+  .linha:hover{background:#F7F9F5}
+  .pessoa{flex:1 1 260px;min-width:0;display:flex;align-items:center;gap:14px}
+  .avatar{width:44px;height:44px;border-radius:50%;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;background:#2F5D8A}
+  .avatar.admin{background:var(--ink)}
+  .avatar.pendente{background:#fff;color:var(--muted);border:1.5px dashed #9AA094}
+  .pessoa-txt{min-width:0;display:flex;flex-direction:column;gap:2px}
+  .pessoa-nome{display:flex;align-items:center;gap:8px;min-width:0}
+  .pessoa-nome b{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pessoa-nome b.sem{color:var(--muted)}
+  .voce{flex:0 0 auto;padding:2px 8px;border-radius:999px;background:var(--line2);font-size:12px;font-weight:700;color:var(--muted2)}
+  .email{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .status{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:13px;font-weight:600;background:#E6F4EA;color:#1E6B3A}
+  .status::before{content:"";width:7px;height:7px;border-radius:50%;background:#2E8A4C}
+  .status.pendente{background:#FFF4D6;color:#6E4A00}
+  .status.pendente::before{background:#C98A00}
+  .acoes{flex:0 0 auto;display:inline-flex;align-items:center;gap:4px}
+  .icone{width:44px;height:44px;border:0;border-radius:10px;background:transparent;color:var(--ink);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s}
+  .icone:hover{background:#EEF1EB}
+  .icone.perigo{color:var(--perigo)}
+  .icone.perigo:hover{background:#FDECEA;color:#951B12}
+  .icone:disabled{cursor:not-allowed;opacity:.35}
+  .icone:disabled:hover{background:transparent}
+  .vazio{padding:48px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;color:var(--muted);font-size:14px}
+  .vazio b{font-size:16px;font-weight:600;color:var(--ink)}
+
+  /* modais */
+  .fundo-modal{position:fixed;inset:0;z-index:20;background:rgba(21,24,15,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+  .fundo-modal[hidden]{display:none}
+  .modal{width:100%;max-width:540px;max-height:92vh;overflow-y:auto;background:#fff;border-radius:20px;box-shadow:0 30px 70px rgba(21,24,15,.3);
+    display:flex;flex-direction:column;animation:surge .2s cubic-bezier(.2,.8,.2,1) both}
+  .modal.pequeno{max-width:440px;padding:24px;gap:16px}
+  @keyframes surge{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
+  .modal-topo{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 24px;border-bottom:1px solid var(--line)}
+  .modal h2{margin:0;font-family:'Space Grotesk',Inter,sans-serif;font-size:22px}
+  .modal-corpo{padding:20px 24px;display:flex;flex-direction:column;gap:18px}
+  .modal-rodape{display:flex;justify-content:flex-end;gap:10px;padding:16px 24px 20px;border-top:1px solid var(--line);flex-wrap:wrap}
+  .modal.pequeno .modal-rodape{padding:0;border:0}
+  .modal.pequeno p{margin:0;font-size:15px;line-height:1.5;color:var(--muted2)}
+  .modal.pequeno strong{color:var(--ink)}
+  .grupo{display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:600}
+  .ajuda{font-size:13px;font-weight:400;color:var(--muted)}
+  .ajuda.erro{color:var(--perigo);font-weight:500}
+  .previa-titulo{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:13px;font-weight:500;border:1px solid}
+  .chip small{font-size:12px;font-weight:700}
+  .chip.novo{background:#E6F4EA;color:#1E6B3A;border-color:#BFE3CB}
+  .chip.existe,.chip.repetido{background:var(--line2);color:var(--muted);border-color:#D5DACF}
+  .chip.invalido{background:#FDECEA;color:#A3201B;border-color:#F4C7C2}
+
+  /* aviso */
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:30;max-width:calc(100% - 32px);padding:8px 8px 8px 18px;border-radius:12px;
+    background:var(--ink);color:#fff;font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:12px;box-shadow:0 12px 30px rgba(21,24,15,.3);animation:sobe .2s ease both}
+  .toast[hidden]{display:none}
+  .toast svg{flex:0 0 auto}
+  .toast.erro svg{stroke:#FF8A80}
+  .desfazer{min-height:36px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:#FFD23F;font-size:14px;font-weight:700;cursor:pointer}
+  .desfazer:hover{background:rgba(255,255,255,.14)}
+  .desfazer[hidden]{display:none}
+  @keyframes sobe{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+
+  @media (max-width:560px){
+    .pagina{padding:24px 16px 48px}
+    h1{font-size:30px}
+    .linha{padding:12px}
+  }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <div class="wrap">
+    <header class="topo">
+      <div>
+        <span class="sobre">GGC Awards · Admin</span>
+        <h1>Contas</h1>
+        <span class="resumo" id="resumo"></span>
+      </div>
+      <button class="btn btn-escuro" type="button" id="btn-adicionar">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+        Adicionar e-mails
+      </button>
+    </header>
+
+    <div class="info">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#15180F" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <span><strong>Só e-mails desta lista conseguem criar conta.</strong> Quem foi adicionado e ainda não se cadastrou aparece como “Aguardando cadastro”. O papel vale a partir do próximo login.</span>
+    </div>
+
+    <section class="card" aria-label="Lista de contas">
+      <div class="barra">
+        <label class="busca-box">
+          <span class="sr">Buscar conta</span>
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4F554B" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <input class="campo" id="busca" type="search" placeholder="Buscar por nome ou e-mail" autocomplete="off">
+        </label>
+        <div class="filtro">
+          <span id="rotulo-filtro">Mostrar</span>
+          <div class="segmentos" id="filtros" role="group" aria-labelledby="rotulo-filtro"></div>
+        </div>
+      </div>
+      <div class="lista" id="lista"></div>
+    </section>
+  </div>
+</div>
+
+<!-- MODAL: adicionar e-mails -->
+<div class="fundo-modal" id="modal-add" hidden>
+  <form class="modal" id="form-add" role="dialog" aria-modal="true" aria-labelledby="titulo-add" novalidate>
+    <div class="modal-topo">
+      <h2 id="titulo-add">Adicionar e-mails</h2>
+      <button class="icone" type="button" data-fechar aria-label="Fechar">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-corpo">
+      <label class="grupo">E-mails autorizados
+        <textarea class="campo" id="emails" rows="5" placeholder="bia@email.com&#10;lipe@email.com, duda@email.com" aria-describedby="ajuda-emails"></textarea>
+        <span class="ajuda" id="ajuda-emails"></span>
+      </label>
+
+      <div class="grupo">
+        <span id="rotulo-papel-novo">Entram como</span>
+        <div class="segmentos papeis-novo" id="papeis-novo" role="group" aria-labelledby="rotulo-papel-novo" style="align-self:flex-start">
+          <button class="seg" type="button" data-papel-novo="votante" aria-pressed="true">Votante</button>
+          <button class="seg admin" type="button" data-papel-novo="admin" aria-pressed="false">Admin</button>
+        </div>
+        <span class="ajuda" id="descricao-papel"></span>
+      </div>
+
+      <div class="grupo" id="bloco-previa" hidden>
+        <span class="previa-titulo" id="previa-titulo"></span>
+        <div class="chips" id="previa"></div>
+      </div>
+    </div>
+    <div class="modal-rodape">
+      <button class="btn btn-claro" type="button" data-fechar>Cancelar</button>
+      <button class="btn btn-ok" type="submit" id="btn-autorizar">Autorizar e-mail</button>
+    </div>
+  </form>
+</div>
+
+<!-- MODAL: remover -->
+<div class="fundo-modal" id="modal-remover" hidden>
+  <div class="modal pequeno" role="alertdialog" aria-modal="true" aria-labelledby="titulo-remover" aria-describedby="texto-remover">
+    <h2 id="titulo-remover"></h2>
+    <p id="texto-remover"></p>
+    <div class="modal-rodape">
+      <button class="btn btn-claro" type="button" data-fechar>Cancelar</button>
+      <button class="btn btn-perigo" type="button" id="btn-confirmar-remocao">Remover</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden>
+  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4CD07D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+  <span id="toast-texto"></span>
+  <button class="desfazer" type="button" id="btn-desfazer" hidden>Desfazer</button>
+</div>
+
+<script>
+/* =====================================================================
+   CONTAS (só admin) — lista de e-mails autorizados + papéis.
+
+   Tabela "contas":
+     email (text, unique, sempre minúsculo) | nome (nullable) | role ('votante'|'admin')
+     | user_id (uuid, nullable: preenchido quando a pessoa cria a conta) | criado_em
+   "Ativo" = user_id preenchido. "Aguardando cadastro" = user_id nulo.
+
+   Só e-mails da lista fazem sign up (SQL no Supabase):
+
+     create function public.checar_convite() returns trigger language plpgsql security definer as $$
+     begin
+       if not exists (select 1 from public.contas where email = lower(new.email)) then
+         raise exception 'E-mail não autorizado';
+       end if;
+       return new;
+     end $$;
+     create trigger so_convidados before insert on auth.users
+       for each row execute function public.checar_convite();
+
+     create function public.ligar_conta() returns trigger language plpgsql security definer as $$
+     begin
+       update public.contas
+          set user_id = new.id,
+              nome = coalesce(nome, new.raw_user_meta_data->>'nome')
+        where email = lower(new.email);
+       return new;
+     end $$;
+     create trigger ligar_conta after insert on auth.users
+       for each row execute function public.ligar_conta();
+   ===================================================================== */
+
+const CONTAS_MOCK = [
+  { email: 'tiago@exemplo.com',      nome: 'Tiago Almeida',    role: 'admin',   user_id: 'u1' },
+  { email: 'bia@exemplo.com',        nome: 'Ana Beatriz Lima', role: 'admin',   user_id: 'u2' },
+  { email: 'brunao@exemplo.com',     nome: 'Bruno Carvalho',   role: 'votante', user_id: 'u3' },
+  { email: 'cami@exemplo.com',       nome: 'Camila Ferreira',  role: 'votante', user_id: 'u4' },
+  { email: 'digao@exemplo.com',      nome: 'Diego Santos',     role: 'votante', user_id: 'u5' },
+  { email: 'duda@exemplo.com',       nome: 'Eduarda Rocha',    role: 'votante', user_id: 'u6' },
+  { email: 'lipe@exemplo.com',       nome: 'Felipe Andrade',   role: 'votante', user_id: 'u7' },
+  { email: 'gabi@exemplo.com',       nome: 'Gabriela Moura',   role: 'votante', user_id: 'u8' },
+  { email: 'rique@exemplo.com',      nome: 'Henrique Tavares', role: 'votante', user_id: 'u9' },
+  { email: 'isa@exemplo.com',        nome: null,               role: 'votante', user_id: null },
+  { email: 'jp@exemplo.com',         nome: null,               role: 'votante', user_id: null },
+  { email: 'lari@exemplo.com',       nome: 'Larissa Mendes',   role: 'votante', user_id: 'u12' },
+  { email: 'marcelinho@exemplo.com', nome: null,               role: 'votante', user_id: null },
+  { email: 'nati@exemplo.com',       nome: 'Natália Ribeiro',  role: 'votante', user_id: 'u14' },
+];
+
+/* ======================= API — troque pelo Supabase =======================
+   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+*/
+const api = {
+  // const { data: { user } } = await supabase.auth.getUser(); return user.email;
+  async meuEmail() { return 'tiago@exemplo.com'; },
+
+  // const { data, error } = await supabase.from('contas').select('email, nome, role, user_id').order('criado_em');
+  // if (error) throw error; return data;
+  async listar() { return CONTAS_MOCK.map((c) => ({ ...c })); },
+
+  // const { error } = await supabase.from('contas').insert(emails.map((email) => ({ email, role }))); if (error) throw error;
+  async adicionar(emails, role) {},
+
+  // const { error } = await supabase.from('contas').update({ role }).eq('email', email); if (error) throw error;
+  async mudarPapel(email, role) {},
+
+  // const { error } = await supabase.from('contas').delete().eq('email', email); if (error) throw error;
+  // Se a conta já existia (user_id), apague também o login numa Edge Function com a service role:
+  //   await supabase.functions.invoke('remover-usuario', { body: { user_id } });
+  //   (dentro dela: supabaseAdmin.auth.admin.deleteUser(user_id))
+  async remover(email, user_id) {},
+};
+/* ========================================================================= */
+
+const PAPEIS = [['votante', 'Votante'], ['admin', 'Admin']];
+const FILTROS = [['todas', 'Todas'], ['admin', 'Admins'], ['votante', 'Votantes'], ['pendente', 'Aguardando']];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const AJUDA_EMAILS = 'Um por linha, ou separados por vírgula. Dá para colar uma lista inteira.';
+
+const estado = {
+  eu: '',
+  contas: [],
+  busca: '',
+  filtro: 'todas',
+  papelNovo: 'votante',
+  removendo: null,
+  ocupado: false,
+};
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const ativo = (c) => !!c.user_id;
+const nomeDe = (c) => c.nome || c.email;
+const qtdAdmins = () => estado.contas.filter((c) => c.role === 'admin').length;
+const iniciais = (c) => {
+  const p = String(c.nome || c.email.split('@')[0]).trim().split(/[\s._-]+/).filter(Boolean);
+  return ((p[0] || '?')[0] + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase();
+};
+
+let ultimoFoco = null;
+let timerToast;
+let acaoDesfazer = null;
+
+/* ---------------- aviso ---------------- */
+function avisar(msg, { erro = false, desfazer = null } = {}) {
+  clearTimeout(timerToast);
+  acaoDesfazer = desfazer;
+  $('toast-texto').textContent = msg;
+  $('toast').classList.toggle('erro', erro);
+  $('btn-desfazer').hidden = !desfazer;
+  $('toast').hidden = false;
+  timerToast = setTimeout(esconderAviso, desfazer ? 5000 : 2800);
+}
+function esconderAviso() {
+  clearTimeout(timerToast);
+  acaoDesfazer = null;
+  $('toast').hidden = true;
+}
+
+/* ---------------- regras ---------------- */
+function travaDe(c) {
+  if (c.email === estado.eu) return 'Você não pode mudar o próprio papel nem se remover.';
+  if (c.role === 'admin' && qtdAdmins() <= 1) return 'Precisa ter pelo menos um admin.';
+  return '';
+}
+
+/* ---------------- lista ---------------- */
+function render() {
+  const total = estado.contas.length;
+  const pendentes = estado.contas.filter((c) => !ativo(c)).length;
+  const admins = qtdAdmins();
+  const contagem = { todas: total, admin: admins, votante: total - admins, pendente: pendentes };
+
+  $('resumo').textContent = `${total} contas · ${total - pendentes} ativas · ${pendentes} aguardando cadastro · ${admins} ${admins === 1 ? 'admin' : 'admins'}`;
+
+  $('filtros').innerHTML = FILTROS.map(([id, rotulo]) =>
+    `<button class="seg" type="button" data-filtro="${id}" aria-pressed="${estado.filtro === id}">${rotulo} <span class="qtd">${contagem[id]}</span></button>`
+  ).join('');
+
+  const termo = estado.busca.trim().toLowerCase();
+  const lista = estado.contas
+    .filter((c) => estado.filtro === 'todas' ? true : estado.filtro === 'pendente' ? !ativo(c) : c.role === estado.filtro)
+    .filter((c) => !termo || c.email.includes(termo) || (c.nome || '').toLowerCase().includes(termo))
+    .sort((a, b) =>
+      (a.email === estado.eu ? -1 : b.email === estado.eu ? 1 : 0) ||
+      (a.role === b.role ? 0 : a.role === 'admin' ? -1 : 1) ||
+      nomeDe(a).localeCompare(nomeDe(b), 'pt-BR'));
+
+  if (!lista.length) {
+    $('lista').innerHTML = `<div class="vazio"><b>Nenhuma conta aqui</b>Tente outra busca ou outro filtro.</div>`;
+    return;
+  }
+
+  $('lista').innerHTML = lista.map((c) => {
+    const trava = travaDe(c);
+    const pessoa = esc(nomeDe(c));
+    const classeAvatar = !ativo(c) ? 'pendente' : c.role === 'admin' ? 'admin' : '';
+    const papeis = PAPEIS.map(([id, rotulo]) => {
+      const sel = c.role === id;
+      return `<button class="seg ${id}" type="button" data-papel="${id}" data-email="${esc(c.email)}" aria-pressed="${sel}" ${trava && !sel ? 'disabled' : ''}>${rotulo}</button>`;
+    }).join('');
+    return `
+      <div class="linha">
+        <div class="pessoa">
+          <span class="avatar ${classeAvatar}" aria-hidden="true">${esc(iniciais(c))}</span>
+          <span class="pessoa-txt">
+            <span class="pessoa-nome">
+              <b class="${c.nome ? '' : 'sem'}">${esc(c.nome || 'Ainda sem nome')}</b>
+              ${c.email === estado.eu ? '<span class="voce">Você</span>' : ''}
+            </span>
+            <span class="email">${esc(c.email)}</span>
+          </span>
+        </div>
+        <span class="status ${ativo(c) ? '' : 'pendente'}">${ativo(c) ? 'Ativo' : 'Aguardando cadastro'}</span>
+        <div class="acoes">
+          <div class="segmentos papeis" role="group" aria-label="Papel de ${pessoa}" ${trava ? `title="${esc(trava)}"` : ''}>${papeis}</div>
+          <button class="icone perigo" type="button" data-remover="${esc(c.email)}" ${trava ? 'disabled' : ''}
+            aria-label="Remover acesso de ${pessoa}" title="${esc(trava || (ativo(c) ? 'Remover acesso' : 'Remover convite'))}">
+            <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg>
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+/* ---------------- mudar papel ---------------- */
+async function trocarPapel(email, role, { silencioso = false } = {}) {
+  const c = estado.contas.find((x) => x.email === email);
+  if (!c || c.role === role || travaDe(c)) return;
+  const antes = c.role;
+  try {
+    await api.mudarPapel(email, role);
+    c.role = role;
+    render();
+    if (!silencioso) {
+      avisar(`${nomeDe(c)} agora é ${role === 'admin' ? 'admin' : 'votante'}.`, {
+        desfazer: () => trocarPapel(email, antes, { silencioso: true }),
+      });
+    }
+  } catch (e) {
+    console.error(e);
+    avisar('Não deu para mudar o papel. Tente de novo.', { erro: true });
+  }
+}
+
+/* ---------------- modais ---------------- */
+function abrirModal(id) {
+  ultimoFoco = document.activeElement;
+  $(id).hidden = false;
+}
+function fecharModais() {
+  $('modal-add').hidden = true;
+  $('modal-remover').hidden = true;
+  estado.removendo = null;
+  if (ultimoFoco && document.contains(ultimoFoco)) ultimoFoco.focus();
+}
+
+/* ---------------- adicionar ---------------- */
+function analisar(texto) {
+  const existentes = new Set(estado.contas.map((c) => c.email));
+  const vistos = new Set();
+  return texto.split(/[\s,;]+/).map((t) => t.trim().toLowerCase()).filter(Boolean).map((email) => {
+    let tipo = 'novo';
+    if (!EMAIL_RE.test(email)) tipo = 'invalido';
+    else if (existentes.has(email)) tipo = 'existe';
+    else if (vistos.has(email)) tipo = 'repetido';
+    vistos.add(email);
+    return { email, tipo };
+  });
+}
+
+const NOTAS = { novo: '', existe: 'já na lista', repetido: 'repetido', invalido: 'inválido' };
+
+function setErroEmails(msg) {
+  $('emails').classList.toggle('invalido', !!msg);
+  $('ajuda-emails').classList.toggle('erro', !!msg);
+  $('ajuda-emails').textContent = msg || AJUDA_EMAILS;
+}
+
+function renderAdicionar() {
+  const itens = analisar($('emails').value);
+  const novos = itens.filter((i) => i.tipo === 'novo').length;
+  $('bloco-previa').hidden = !itens.length;
+  $('previa-titulo').textContent = `${novos} ${novos === 1 ? 'novo' : 'novos'} de ${itens.length}`;
+  $('previa').innerHTML = itens.map((i) =>
+    `<span class="chip ${i.tipo}">${esc(i.email)}${NOTAS[i.tipo] ? ` <small>· ${NOTAS[i.tipo]}</small>` : ''}</span>`
+  ).join('');
+  $('btn-autorizar').textContent = novos > 1 ? `Autorizar ${novos} e-mails` : 'Autorizar e-mail';
+
+  document.querySelectorAll('[data-papel-novo]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.papelNovo === estado.papelNovo)));
+  $('descricao-papel').textContent = estado.papelNovo === 'admin'
+    ? 'Admin vota e também gerencia candidatos, categorias e contas.'
+    : 'Votante só entra, vota na urna e pronto.';
+}
+
+function abrirAdicionar() {
+  $('emails').value = '';
+  estado.papelNovo = 'votante';
+  setErroEmails('');
+  renderAdicionar();
+  abrirModal('modal-add');
+  $('emails').focus();
+}
+
+async function salvarAdicao() {
+  if (estado.ocupado) return;
+  const itens = analisar($('emails').value);
+  const novos = itens.filter((i) => i.tipo === 'novo').map((i) => i.email);
+  if (!itens.length) return setErroEmails('Cole pelo menos um e-mail.');
+  if (itens.some((i) => i.tipo === 'invalido')) return setErroEmails('Corrija os e-mails marcados em vermelho.');
+  if (!novos.length) return setErroEmails('Todos esses e-mails já estão na lista.');
+
+  estado.ocupado = true;
+  $('btn-autorizar').disabled = true;
+  try {
+    await api.adicionar(novos, estado.papelNovo);
+    estado.contas.push(...novos.map((email) => ({ email, nome: null, role: estado.papelNovo, user_id: null })));
+    estado.filtro = 'todas';
+    fecharModais();
+    render();
+    const ignorados = itens.length - novos.length;
+    avisar(`${novos.length} ${novos.length === 1 ? 'e-mail autorizado' : 'e-mails autorizados'}` +
+      (ignorados ? ` · ${ignorados} já ${ignorados === 1 ? 'estava' : 'estavam'} na lista` : '') + '.');
+  } catch (e) {
+    console.error(e);
+    avisar('Não deu para adicionar. Tente de novo.', { erro: true });
+  } finally {
+    estado.ocupado = false;
+    $('btn-autorizar').disabled = false;
+  }
+}
+
+/* ---------------- remover ---------------- */
+function pedirRemocao(email) {
+  const c = estado.contas.find((x) => x.email === email);
+  if (!c || travaDe(c)) return;
+  estado.removendo = c;
+  $('titulo-remover').textContent = ativo(c) ? 'Remover acesso?' : 'Remover convite?';
+  $('texto-remover').innerHTML = `<strong>${esc(c.email)}</strong> ` + (ativo(c)
+    ? 'não vai mais conseguir entrar. Os votos que já fez continuam valendo.'
+    : 'sai da lista e não vai conseguir criar conta.');
+  abrirModal('modal-remover');
+  $('btn-confirmar-remocao').focus();
+}
+
+async function confirmarRemocao() {
+  const alvo = estado.removendo;
+  if (!alvo || estado.ocupado) return;
+  estado.ocupado = true;
+  try {
+    await api.remover(alvo.email, alvo.user_id);
+    estado.contas = estado.contas.filter((c) => c.email !== alvo.email);
+    ultimoFoco = $('btn-adicionar');
+    fecharModais();
+    render();
+    avisar(ativo(alvo) ? `Acesso de ${nomeDe(alvo)} removido.` : `Convite de ${alvo.email} removido.`);
+  } catch (e) {
+    console.error(e);
+    avisar('Não deu para remover. Tente de novo.', { erro: true });
+  } finally {
+    estado.ocupado = false;
+  }
+}
+
+/* ---------------- eventos ---------------- */
+$('btn-adicionar').addEventListener('click', abrirAdicionar);
+$('busca').addEventListener('input', (e) => { estado.busca = e.target.value; render(); });
+$('emails').addEventListener('input', () => { setErroEmails(''); renderAdicionar(); });
+$('form-add').addEventListener('submit', (e) => { e.preventDefault(); salvarAdicao(); });
+$('btn-confirmar-remocao').addEventListener('click', confirmarRemocao);
+$('btn-desfazer').addEventListener('click', () => { const f = acaoDesfazer; esconderAviso(); if (f) f(); });
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (b && !b.disabled) {
+    if (b.dataset.filtro) { estado.filtro = b.dataset.filtro; render(); return; }
+    if (b.dataset.papel) { trocarPapel(b.dataset.email, b.dataset.papel); return; }
+    if (b.dataset.remover) { pedirRemocao(b.dataset.remover); return; }
+    if (b.dataset.papelNovo) { estado.papelNovo = b.dataset.papelNovo; renderAdicionar(); return; }
+    if (b.hasAttribute('data-fechar')) { fecharModais(); return; }
+  }
+  if (e.target.classList && e.target.classList.contains('fundo-modal')) fecharModais();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && (!$('modal-add').hidden || !$('modal-remover').hidden)) fecharModais();
+});
+
+/* ---------------- início ---------------- */
+(async function iniciar() {
+  try {
+    const [eu, contas] = await Promise.all([api.meuEmail(), api.listar()]);
+    estado.eu = (eu || '').toLowerCase();
+    estado.contas = contas;
+  } catch (e) {
+    console.error(e);
+    avisar('Não deu para carregar as contas.', { erro: true });
+  }
+  render();
+})();
+</script>
+</body>
+</html>

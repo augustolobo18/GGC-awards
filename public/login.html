@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entrar — GGC Awards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="icon" type="image/jpeg" href="assets/logo_ggc.jpg">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<style>
+  :root{
+    --azul:#0A63AD; --ciano:#2EC4F0; --ciano-claro:#7FE0FF; --amarelo:#FFC21A; --laranja:#FF9F1C;
+    --marinho:#0B2A4A; --erro:#A3201B;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--azul);font-family:Nunito,system-ui,sans-serif;color:#fff}
+  a{color:#FFD23F}a:hover{color:#FFE689}
+
+  .fundo{position:relative;min-height:100vh;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:48px 16px}
+
+  /* água + manchas de cor que o vidro borra */
+  .agua{position:absolute;inset:0;background-color:var(--azul);
+    background-image:radial-gradient(circle at 20% 20%,rgba(94,214,255,.55) 0,transparent 45%),
+                     radial-gradient(circle at 80% 85%,rgba(31,168,232,.7) 0,transparent 50%);
+    background-size:160% 160%,160% 160%;animation:ondula 18s ease-in-out infinite}
+  .mancha{position:absolute;border-radius:50%}
+  .m1{width:520px;height:520px;left:8%;top:6%;background:var(--ciano);filter:blur(10px);opacity:.9;animation:deriva1 16s ease-in-out infinite}
+  .m2{width:380px;height:380px;right:14%;top:18%;background:var(--amarelo);opacity:.95;animation:deriva2 19s ease-in-out infinite}
+  .m3{width:460px;height:460px;left:34%;bottom:-12%;background:var(--laranja);opacity:.75;animation:deriva3 22s ease-in-out infinite}
+  .m4{width:300px;height:300px;right:4%;bottom:4%;background:var(--ciano-claro);opacity:.7;animation:deriva1 16s ease-in-out infinite}
+  @keyframes deriva1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(80px,-60px) scale(1.15)}}
+  @keyframes deriva2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-90px,70px) scale(.9)}}
+  @keyframes deriva3{0%,100%{transform:translate(0,0)}50%{transform:translate(50px,90px)}}
+  @keyframes ondula{0%,100%{background-position:0% 0%,100% 100%}50%{background-position:100% 50%,0% 50%}}
+  @media (prefers-reduced-motion: reduce){.agua,.mancha{animation:none}}
+
+  /* card de vidro */
+  .vidro{position:relative;z-index:1;width:100%;max-width:440px;padding:40px 36px 32px;border-radius:32px;
+    background:rgba(8,44,88,.34);-webkit-backdrop-filter:blur(26px) saturate(160%);backdrop-filter:blur(26px) saturate(160%);
+    border:1.5px solid rgba(255,255,255,.45);box-shadow:0 30px 60px rgba(4,30,64,.35),inset 0 1px 0 rgba(255,255,255,.5);
+    display:flex;flex-direction:column;gap:24px;animation:entra .6s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes entra{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
+
+  .cabeca{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+  h1{margin:0;font-family:'Lilita One',Nunito,sans-serif;font-weight:400;font-size:58px;line-height:.95;color:var(--amarelo);
+    letter-spacing:.01em;-webkit-text-stroke:3px var(--marinho);paint-order:stroke fill;text-shadow:0 5px 0 var(--marinho)}
+  .cabeca p{margin:6px 0 0;font-size:16px;line-height:1.45;font-weight:600;max-width:320px}
+
+  form{display:flex;flex-direction:column;gap:16px}
+  .rotulo{display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:800}
+  .campo{height:52px;width:100%;padding:0 18px;border-radius:16px;border:2px solid rgba(255,255,255,.55);background:rgba(255,255,255,.94);
+    color:var(--marinho);font:700 16px Nunito,sans-serif;transition:border-color .15s,box-shadow .15s}
+  .campo:focus{outline:none;border-color:#FFD23F;box-shadow:0 0 0 4px rgba(255,210,63,.35)}
+  .senha-box{position:relative;display:flex}
+  .senha-box .campo{padding-right:56px}
+  .olho{position:absolute;right:4px;top:4px;width:44px;height:44px;border:0;border-radius:12px;background:transparent;color:var(--marinho);
+    display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+  .olho .ico-fechado{display:none}
+  .olho[aria-pressed="true"] .ico-aberto{display:none}
+  .olho[aria-pressed="true"] .ico-fechado{display:block}
+
+  .extras{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-size:14px;font-weight:700}
+  .lembrar{display:inline-flex;align-items:center;gap:8px;min-height:44px;cursor:pointer}
+  .lembrar input{width:18px;height:18px;accent-color:var(--amarelo);margin:0}
+  .extras a{font-weight:800}
+
+  .erro{margin:0;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.94);color:var(--erro);font-size:14px;font-weight:800;
+    display:flex;gap:8px;align-items:center}
+  .erro[hidden]{display:none}
+  .erro.ok{color:#1E6B3A}
+  .rotulo[hidden]{display:none}
+  .extras a[hidden]{display:none}
+
+  .btn-entrar{height:58px;margin-top:4px;width:100%;border:3px solid var(--marinho);border-radius:18px;background:var(--amarelo);color:var(--marinho);
+    font-family:'Lilita One',Nunito,sans-serif;font-size:22px;letter-spacing:.02em;box-shadow:0 5px 0 var(--marinho);
+    display:inline-flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;text-decoration:none;
+    transition:transform .1s,box-shadow .1s,filter .15s}
+  .btn-entrar:hover{filter:brightness(1.05);color:var(--marinho)}
+  .btn-entrar:active{transform:translateY(3px);box-shadow:0 2px 0 var(--marinho)}
+  .btn-entrar:disabled{cursor:wait}
+  .btn-entrar:focus-visible,.olho:focus-visible{outline:3px solid #fff;outline-offset:3px}
+  .spinner{animation:gira .8s linear infinite}
+  @keyframes gira{to{transform:rotate(360deg)}}
+
+  .sucesso{display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;padding:8px 0}
+  .sucesso[hidden]{display:none}
+  .selo{width:72px;height:72px;border-radius:50%;background:var(--amarelo);border:3px solid var(--marinho);color:var(--marinho);
+    display:inline-flex;align-items:center;justify-content:center}
+  .sucesso p{margin:0}
+  .sucesso .grande{font-size:20px;font-weight:900}
+  .sucesso .peq{font-size:15px;font-weight:600}
+
+  .rodape{margin:0;text-align:center;font-size:13px;font-weight:600;color:rgba(255,255,255,.92)}
+
+  @media (max-width:420px){ .vidro{padding:32px 22px 26px;border-radius:26px} h1{font-size:48px} }
+</style>
+</head>
+<body>
+<main class="fundo">
+  <div class="agua" aria-hidden="true"></div>
+  <div class="mancha m1" aria-hidden="true"></div>
+  <div class="mancha m2" aria-hidden="true"></div>
+  <div class="mancha m3" aria-hidden="true"></div>
+  <div class="mancha m4" aria-hidden="true"></div>
+
+  <section class="vidro" aria-labelledby="titulo">
+    <div class="cabeca">
+      <h1 id="titulo">GGC<br>Awards</h1>
+      <p id="texto-intro">Mostra seu título de eleitor da galera e bora votar.</p>
+    </div>
+
+    <form id="form" novalidate>
+      <label class="rotulo">E-mail
+        <input class="campo" id="email" type="email" name="email" autocomplete="email" placeholder="voce@email.com">
+      </label>
+
+      <label class="rotulo">Senha
+        <span class="senha-box">
+          <input class="campo" id="senha" type="password" name="senha" autocomplete="current-password" placeholder="••••••••">
+          <button class="olho" id="olho" type="button" aria-label="Mostrar senha" aria-pressed="false">
+            <svg class="ico-aberto" aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5 12 5s9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="ico-fechado" aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6 0 9.5 7 9.5 7a17 17 0 0 1-3.2 4.1"/><path d="M6.6 6.6C3.9 8.4 2.5 12 2.5 12s3.5 7 9.5 7a9.6 9.6 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+          </button>
+        </span>
+      </label>
+
+      <label class="rotulo" id="bloco-confirmar" hidden>Confirmar senha
+        <input class="campo" id="confirmar" type="password" name="confirmar" autocomplete="new-password" placeholder="••••••••">
+      </label>
+
+      <div class="extras">
+        <a href="#" id="alternar">Primeiro acesso? Criar conta</a>
+        <a href="#" id="esqueci">Esqueci a senha</a>
+      </div>
+
+      <p class="erro" id="erro" role="alert" hidden>
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5v.01"/></svg>
+        <span id="erro-texto"></span>
+      </p>
+
+      <button class="btn-entrar" id="entrar" type="submit">Entrar para votar</button>
+    </form>
+
+    <p class="rodape">Só quem está na lista da galera consegue entrar.</p>
+  </section>
+</main>
+
+<script>
+/* LOGIN — entrar, criar conta (só e-mails convidados) e esqueci a senha.
+   Quem barra e-mail fora da lista é o hook Before User Created no banco. */
+
+const $ = (id) => document.getElementById(id);
+const emailValido = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+const SENHA_MIN = 6;
+const MSG_FORA = 'Esse e-mail não está na lista. Peça para a galera te cadastrar.';
+let modo = 'entrar';   // 'entrar' | 'criar'
+
+function mostrarErro(msg, ok = false) {
+  $('erro-texto').textContent = msg;
+  $('erro').classList.toggle('ok', ok);
+  $('erro').hidden = !msg;
+}
+
+function rotuloBotao() { return modo === 'entrar' ? 'Entrar para votar' : 'Criar conta'; }
+
+function setCarregando(sim) {
+  const b = $('entrar');
+  b.disabled = sim;
+  b.innerHTML = sim
+    ? '<svg class="spinner" aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg> Conferindo…'
+    : rotuloBotao();
+}
+
+function aplicarModo() {
+  const criar = modo === 'criar';
+  $('bloco-confirmar').hidden = !criar;
+  $('senha').autocomplete = criar ? 'new-password' : 'current-password';
+  $('alternar').textContent = criar ? 'Já tenho conta. Entrar' : 'Primeiro acesso? Criar conta';
+  $('esqueci').hidden = criar;
+  $('entrar').textContent = rotuloBotao();
+  $('texto-intro').textContent = criar
+    ? 'Use o e-mail que a galera cadastrou para você e escolha uma senha.'
+    : 'Mostra seu título de eleitor da galera e bora votar.';
+  mostrarErro('');
+}
+
+$('olho').addEventListener('click', () => {
+  const mostrar = $('olho').getAttribute('aria-pressed') !== 'true';
+  $('olho').setAttribute('aria-pressed', String(mostrar));
+  $('olho').setAttribute('aria-label', mostrar ? 'Esconder senha' : 'Mostrar senha');
+  $('senha').type = mostrar ? 'text' : 'password';
+  $('confirmar').type = mostrar ? 'text' : 'password';
+});
+
+['email', 'senha', 'confirmar'].forEach((id) => $(id).addEventListener('input', () => mostrarErro('')));
+
+$('alternar').addEventListener('click', (e) => {
+  e.preventDefault();
+  modo = modo === 'entrar' ? 'criar' : 'entrar';
+  aplicarModo();
+});
+
+$('esqueci').addEventListener('click', async (e) => {
+  e.preventDefault();
+  const email = $('email').value.trim().toLowerCase();
+  if (!emailValido(email)) { mostrarErro('Coloca seu e-mail acima para a gente mandar o link.'); $('email').focus(); return; }
+  mostrarErro('');
+  try {
+    const redirectTo = new URL('nova-senha.html', location.href).href;
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) throw error;
+    mostrarErro('Se esse e-mail tem conta, enviamos o link para criar uma nova senha.', true);
+  } catch (err) {
+    console.error(err);
+    mostrarErro(/rate|seconds|many/i.test(err.message || '')
+      ? 'Muitas tentativas. Espere um pouco e tente de novo.'
+      : 'Não deu para enviar o link. Tente de novo.');
+  }
+});
+
+async function irParaATela() {
+  const s = await GGC.sessaoAtual();
+  if (!s) throw new Error('Sem sessão');
+  if (!s.conta) {
+    await sb.auth.signOut();
+    throw new Error('não está na lista');
+  }
+  location.replace(GGC.destinoPorRole(s.conta.role));
+}
+
+function traduzir(err) {
+  const m = String(err.message || '');
+  if (/não está na lista/i.test(m)) return MSG_FORA;
+  if (/already|registered|exists/i.test(m)) return 'Esse e-mail já tem conta. Entre com a senha.';
+  if (/invalid login|credentials/i.test(m)) return 'E-mail ou senha não batem.';
+  if (/password/i.test(m) && /(least|short|weak|characters)/i.test(m)) return `A senha precisa ter pelo menos ${SENHA_MIN} caracteres.`;
+  if (/rate|many/i.test(m)) return 'Muitas tentativas. Espere um pouco e tente de novo.';
+  if (/network|fetch/i.test(m)) return 'Sem conexão. Tente de novo.';
+  return m || 'Não deu para entrar. Tente de novo.';
+}
+
+$('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = $('email').value.trim().toLowerCase();
+  const senha = $('senha').value;
+  if (!emailValido(email)) { mostrarErro('Coloca um e-mail válido.'); $('email').focus(); return; }
+  if (!senha) { mostrarErro('Faltou a senha.'); $('senha').focus(); return; }
+  if (modo === 'criar') {
+    if (senha.length < SENHA_MIN) { mostrarErro(`A senha precisa ter pelo menos ${SENHA_MIN} caracteres.`); $('senha').focus(); return; }
+    if (senha !== $('confirmar').value) { mostrarErro('As senhas não são iguais.'); $('confirmar').focus(); return; }
+  }
+
+  mostrarErro('');
+  setCarregando(true);
+  try {
+    if (modo === 'criar') {
+      const { data, error } = await sb.auth.signUp({ email, password: senha });
+      if (error) throw error;
+      if (!data.session) {
+        mostrarErro('Conta criada. Confirme pelo link que enviamos no seu e-mail e depois entre.', true);
+        setCarregando(false);
+        return;
+      }
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+      if (error) throw error;
+    }
+    await irParaATela();
+  } catch (err) {
+    console.error(err);
+    mostrarErro(traduzir(err));
+    setCarregando(false);
+  }
+});
+
+(async function iniciar() {
+  const veioSemConta = new URLSearchParams(location.search).get('erro') === 'sem_conta';
+  try {
+    const s = await GGC.sessaoAtual();
+    if (s && s.conta) { location.replace(GGC.destinoPorRole(s.conta.role)); return; }
+    if (s && !s.conta) await sb.auth.signOut();
+  } catch (err) { console.error(err); }
+  aplicarModo();
+  if (veioSemConta) mostrarErro(MSG_FORA);
+  GGC.liberarPagina();
+})();
+</script>
+</body>
+</html>

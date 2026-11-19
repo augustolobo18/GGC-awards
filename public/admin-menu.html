@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Menu — GGC Awards Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&family=Lilita+One&display=swap" rel="stylesheet">
+<link rel="icon" type="image/jpeg" href="assets/logo_ggc.jpg">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<style>
+  :root{
+    --bg:#E7E9E4; --ink:#15180F; --muted:#4F554B; --borda:#C9CEC3; --foco:#1F5FBF; --line2:#EEF0EB;
+    --marinho:#0B2A4A; --amarelo:#FFC21A; --texto-claro:#CFE6F7; --urna:#D8D3C6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif}
+  button{font-family:inherit}
+
+  .pagina{min-height:100vh;padding:32px 24px 64px}
+  .wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:32px}
+
+  .topo{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px}
+  .sobre{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  h1{margin:4px 0 0;font-family:'Space Grotesk',Inter,sans-serif;font-size:36px;line-height:1.1}
+  .usuario{display:inline-flex;align-items:center;gap:10px}
+  .ini{width:40px;height:40px;border-radius:50%;background:var(--ink);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
+  .sair{min-height:44px;padding:0 16px;border:1.5px solid var(--borda);border-radius:10px;background:#fff;color:var(--ink);font-size:14px;font-weight:600;
+    display:inline-flex;align-items:center;gap:8px;cursor:pointer;transition:background .15s}
+  .sair:hover{background:#F2F5F0}
+  .sair:focus-visible,.cartao:focus-visible{outline:3px solid var(--foco);outline-offset:4px}
+
+  .grade{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+  .grade .largo{grid-column:1/-1}
+
+  .cartao{height:100%;padding:24px;border-radius:20px;background:#fff;color:var(--ink);text-decoration:none;box-shadow:0 10px 30px rgba(30,35,25,.08);
+    display:flex;flex-direction:column;gap:18px;transition:transform .15s,box-shadow .15s;animation:entra .4s cubic-bezier(.2,.8,.2,1) both}
+  .cartao:hover{transform:translateY(-3px);box-shadow:0 18px 40px rgba(30,35,25,.14)}
+  .cartao:hover .seta{transform:translateX(4px)}
+  .seta{transition:transform .15s}
+  @keyframes entra{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .grade li:nth-child(2) .cartao{animation-delay:.05s}
+  .grade li:nth-child(3) .cartao{animation-delay:.1s}
+  .grade li:nth-child(4) .cartao{animation-delay:.15s}
+
+  .cartao-topo{display:flex;align-items:center;justify-content:space-between}
+  .icone{width:52px;height:52px;border-radius:14px;background:var(--line2);display:inline-flex;align-items:center;justify-content:center}
+  .cartao-txt{display:flex;flex-direction:column;gap:6px}
+  .cartao-txt b{font-family:'Space Grotesk',Inter,sans-serif;font-size:22px}
+  .cartao-txt span{font-size:15px;line-height:1.5;color:var(--muted)}
+  .cartao-rodape{margin-top:auto;display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600}
+  .num{min-width:44px;height:32px;padding:0 10px;border-radius:8px;background:var(--ink);color:#fff;display:inline-flex;align-items:center;justify-content:center;font:700 16px Arial,sans-serif}
+  .pendentes{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#FFF4D6;color:#6E4A00;font-size:13px;font-weight:600}
+  .pendentes::before{content:"";width:7px;height:7px;border-radius:50%;background:#C98A00}
+  .pendentes[hidden]{display:none}
+
+  /* apuração (destaque) */
+  .cartao.apuracao{position:relative;overflow:hidden;min-height:200px;padding:32px;border-radius:24px;background:var(--marinho);color:#fff;
+    box-shadow:0 16px 36px rgba(11,42,74,.25);flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:24px}
+  .cartao.apuracao::before,.cartao.apuracao::after{content:"";position:absolute;border-radius:50%;pointer-events:none}
+  .cartao.apuracao::before{width:420px;height:420px;left:-120px;top:-200px;background:radial-gradient(circle,rgba(46,196,240,.45) 0,rgba(46,196,240,0) 65%)}
+  .cartao.apuracao::after{width:380px;height:380px;right:-100px;bottom:-200px;background:radial-gradient(circle,rgba(255,194,26,.3) 0,rgba(255,194,26,0) 65%)}
+  .cartao.apuracao>*{position:relative}
+  .ap-esq{display:flex;align-items:center;gap:20px}
+  .ap-icone{width:72px;height:72px;flex:0 0 auto;border-radius:20px;background:rgba(255,194,26,.16);border:1.5px solid rgba(255,194,26,.5);display:inline-flex;align-items:center;justify-content:center}
+  .ap-txt{display:flex;flex-direction:column;gap:6px}
+  .ap-txt b{font-family:'Lilita One',Inter,sans-serif;font-weight:400;font-size:40px;line-height:1;color:var(--amarelo);
+    -webkit-text-stroke:2px var(--marinho);paint-order:stroke fill;text-shadow:0 3px 0 var(--marinho)}
+  .ap-txt span{font-size:16px;color:var(--texto-claro)}
+  .ap-dir{display:inline-flex;align-items:center;gap:16px}
+  .ap-num{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+  .ap-num b{font-family:'Space Grotesk',Inter,sans-serif;font-size:32px;line-height:1}
+  .ap-num b small{font-size:16px;font-weight:500;color:var(--texto-claro)}
+  .ap-num span{font-size:13px;color:var(--texto-claro)}
+  .ap-seta{width:48px;height:48px;border-radius:50%;background:var(--amarelo);color:var(--marinho);display:inline-flex;align-items:center;justify-content:center}
+
+  /* urna */
+  .cartao.urna{background:var(--urna);box-shadow:0 10px 30px rgba(30,35,25,.08),inset 0 2px 0 rgba(255,255,255,.6)}
+  .cartao.urna .icone{background:#2A2B28}
+  .cartao.urna .cartao-txt span{color:#3A3D35}
+  .teclas{display:inline-flex;gap:4px}
+  .teclas i{width:22px;height:14px;border-radius:3px}
+  .teclas i:nth-child(1){background:#FAFAF7;box-shadow:0 2px 0 #8E8F88}
+  .teclas i:nth-child(2){background:#E8762C;box-shadow:0 2px 0 #9A4710}
+  .teclas i:nth-child(3){width:28px;background:#35A55A;box-shadow:0 2px 0 #1B6332}
+
+  /* card Edição */
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .cartao.edicao{cursor:default}
+  .cartao.edicao:hover{transform:none;box-shadow:0 10px 30px rgba(30,35,25,.08)}
+  .status-ed{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;background:#FFF4D6;color:#6E4A00;font-size:13px;font-weight:700}
+  .status-ed::before{content:"";width:8px;height:8px;border-radius:50%;background:#C98A00}
+  .status-ed.aberta{background:#E6F4EA;color:#1E6B3A}
+  .status-ed.aberta::before{background:#2E8A4C}
+  .status-ed.encerrada{background:#FDECEA;color:#A3201B}
+  .status-ed.encerrada::before{background:#B42318}
+  .ed-acoes{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+  .ed-acoes [hidden]{display:none}
+  .form-ano{display:inline-flex;gap:8px;align-items:center}
+  .campo-ano{width:110px;height:46px;padding:0 12px;border:1.5px solid var(--borda);border-radius:10px;font:600 16px Inter,sans-serif;color:var(--ink);background:#FAFBF8}
+  .campo-ano:focus{outline:none;border-color:var(--foco);box-shadow:0 0 0 3px rgba(31,95,191,.18)}
+  .btn{min-height:46px;padding:0 20px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:background .15s,transform .06s}
+  .btn:active{transform:translateY(1px)}
+  .btn:disabled{opacity:.6;cursor:wait}
+  .btn:focus-visible{outline:3px solid var(--foco);outline-offset:2px}
+  .btn-claro{border:1.5px solid var(--borda);background:#fff;color:var(--ink)}
+  .btn-claro:hover{background:#F2F5F0}
+  .btn-ok{border:0;background:#35A55A;color:#0B1A0F;font-weight:700;box-shadow:0 3px 0 #1B6332}
+  .btn-ok:hover{background:#2F9550}
+  .btn-perigo{border:0;background:#B42318;color:#fff;font-weight:700}
+  .btn-perigo:hover{background:#951B12}
+  .fundo-modal{position:fixed;inset:0;z-index:20;background:rgba(21,24,15,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+  .fundo-modal[hidden]{display:none}
+  .modal{width:100%;max-width:440px;padding:24px;gap:16px;display:flex;flex-direction:column;background:#fff;border-radius:20px;box-shadow:0 30px 70px rgba(21,24,15,.3)}
+  .modal h2{margin:0;font-family:'Space Grotesk',Inter,sans-serif;font-size:22px}
+  .modal p{margin:0;font-size:15px;line-height:1.5;color:#3E423A}
+  .modal-rodape{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:30;max-width:calc(100% - 32px);padding:12px 18px;border-radius:12px;background:var(--ink);color:#fff;font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:10px;box-shadow:0 12px 30px rgba(21,24,15,.3)}
+  .toast[hidden]{display:none}
+  .toast.erro svg{stroke:#FF8A80}
+
+  @media (max-width:560px){
+    .pagina{padding:24px 16px 48px}
+    h1{font-size:30px}
+    .cartao.apuracao{padding:24px}
+    .ap-txt b{font-size:32px}
+    .ap-icone{width:56px;height:56px}
+    .ap-dir{width:100%;justify-content:space-between}
+    .ap-num{align-items:flex-start}
+  }
+  @media (prefers-reduced-motion: reduce){ .cartao{animation:none;transition:none} }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <div class="wrap">
+    <header class="topo">
+      <div>
+        <span class="sobre">GGC Awards · Admin</span>
+        <h1 id="ola">Olá!</h1>
+      </div>
+      <div class="usuario">
+        <span class="ini" id="iniciais" aria-hidden="true">?</span>
+        <button class="sair" type="button" id="btn-sair">
+          <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg>
+          Sair
+        </button>
+      </div>
+    </header>
+
+    <nav aria-label="Menu do admin">
+      <ul class="grade">
+        <li class="largo">
+          <a class="cartao apuracao" href="admin-apuracao.html">
+            <span class="ap-esq">
+              <span class="ap-icone" aria-hidden="true">
+                <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#FFC21A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/></svg>
+              </span>
+              <span class="ap-txt">
+                <b>Apuração</b>
+                <span>Resultado ao vivo do GGC Of The Year e de cada categoria.</span>
+              </span>
+            </span>
+            <span class="ap-dir">
+              <span class="ap-num">
+                <b id="votaram">– <small>de –</small></b>
+                <span>já votaram</span>
+              </span>
+              <span class="ap-seta seta" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+              </span>
+            </span>
+          </a>
+        </li>
+
+        <li>
+          <a class="cartao" href="admin-contas.html">
+            <span class="cartao-topo">
+              <span class="icone" aria-hidden="true">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#15180F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14a6.5 6.5 0 0 1 3.5 6"/></svg>
+              </span>
+              <span class="pendentes" id="pendentes" hidden></span>
+              <span class="num" id="qtd-candidatos" aria-label="candidatos na urna">–</span>
+            </span>
+            <span class="cartao-txt">
+              <b>Participantes</b>
+              <span>Cadastre e-mail, nome, apelido, número, foto e papel. Quem tem número é candidato.</span>
+            </span>
+            <span class="cartao-rodape"><span id="qtd-contas">–</span> participantes
+              <svg class="seta" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+            </span>
+          </a>
+        </li>
+
+        <li>
+          <a class="cartao" href="admin-categorias.html">
+            <span class="cartao-topo">
+              <span class="icone" aria-hidden="true">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#15180F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
+              </span>
+              <span class="num" id="qtd-categorias" aria-label="categorias cadastradas">–</span>
+            </span>
+            <span class="cartao-txt">
+              <b>Categorias</b>
+              <span>Crie as categorias, defina a principal (GGC Of The Year) e a ordem da urna.</span>
+            </span>
+            <span class="cartao-rodape">Gerenciar categorias
+              <svg class="seta" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+            </span>
+          </a>
+        </li>
+
+        <li>
+          <a class="cartao urna" href="urna-eletronica.html">
+            <span class="cartao-topo">
+              <span class="icone" aria-hidden="true">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h4"/><path d="M15 9h2"/><path d="M7 13h2"/><path d="M11 13h2"/><path d="M15 13h2"/><path d="M7 17h10"/></svg>
+              </span>
+              <span class="teclas" aria-hidden="true"><i></i><i></i><i></i></span>
+            </span>
+            <span class="cartao-txt">
+              <b>Urna</b>
+              <span>Vote como qualquer membro do grupo. Admin também vota.</span>
+            </span>
+            <span class="cartao-rodape">Ir para a urna
+              <svg class="seta" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+            </span>
+          </a>
+        </li>
+
+        <li class="largo">
+          <div class="cartao edicao" aria-labelledby="ed-titulo">
+            <span class="cartao-topo">
+              <span class="icone" aria-hidden="true">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#15180F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4"/><path d="M16 3v4"/></svg>
+              </span>
+              <span class="status-ed" id="ed-status" role="status">–</span>
+            </span>
+            <span class="cartao-txt">
+              <b id="ed-titulo">Edição <span id="ed-ano">–</span></b>
+              <span id="ed-texto"></span>
+            </span>
+            <div class="ed-acoes">
+              <form class="form-ano" id="form-ano" novalidate>
+                <label class="sr" for="campo-ano">Ano da edição</label>
+                <input class="campo-ano" id="campo-ano" type="number" inputmode="numeric" min="2000" max="2100">
+                <button class="btn btn-claro btn-ed" id="btn-ano" type="submit">Definir ano</button>
+              </form>
+              <button class="btn btn-ok btn-ed" id="btn-abrir" type="button" hidden>Abrir votação</button>
+              <button class="btn btn-perigo btn-ed" id="btn-encerrar" type="button" hidden>Encerrar votação</button>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</div>
+
+<div class="fundo-modal" id="modal-confirmar" hidden>
+  <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="titulo-confirmar" aria-describedby="texto-confirmar">
+    <h2 id="titulo-confirmar"></h2>
+    <p id="texto-confirmar"></p>
+    <div class="modal-rodape">
+      <button class="btn btn-claro" type="button" data-fechar>Cancelar</button>
+      <button class="btn btn-ok" type="button" id="btn-confirmar">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden>
+  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4CD07D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+  <span id="toast-texto"></span>
+</div>
+
+<script>
+/* =====================================================================
+   MENU DO ADMIN (admin e dev). Os links apontam para os outros arquivos:
+   admin-apuracao.html, admin-contas.html (participantes), admin-categorias.html, urna-eletronica.html.
+
+   Card "Edição": ano + abrir / encerrar / começar novo ano, via rpc
+   abrir_votacao(), encerrar_votacao() e definir_ano(n) (o banco confere o papel e o status).
+   ===================================================================== */
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+
+const api = {
+  async resumo() {
+    const cont = (q) => q.then((r) => { if (r.error) throw r.error; return r.count || 0; });
+    const head = () => sb.from('contas').select('id', { count: 'exact', head: true });
+    const [el, participantes, pendentes, candidatos, eleitores, categorias, votaram] = await Promise.all([
+      sb.from('eleicao').select('ano, status').eq('id', 1).single(),
+      cont(head()),
+      cont(head().is('user_id', null)),
+      cont(head().not('numero', 'is', null)),
+      cont(head().not('user_id', 'is', null)),
+      cont(sb.from('categorias').select('id', { count: 'exact', head: true })),
+      sb.rpc('qtd_que_votaram'),
+    ]);
+    if (el.error) throw el.error;
+    if (votaram.error) throw votaram.error;
+    return { eleicao: el.data, participantes, pendentes, candidatos, eleitores, categorias, votaram: votaram.data || 0 };
+  },
+  async rpc(nome, args) {
+    const { error } = await sb.rpc(nome, args);
+    if (error) throw error;
+  },
+};
+
+const estado = { eleicao: null, ocupado: false };
+let ultimoFoco = null;
+let timerToast;
+let resolverConfirmacao = null;
+
+/* ---------------- aviso ---------------- */
+function avisar(msg, erro = false) {
+  clearTimeout(timerToast);
+  $('toast-texto').textContent = msg;
+  $('toast').classList.toggle('erro', erro);
+  $('toast').hidden = false;
+  timerToast = setTimeout(() => { $('toast').hidden = true; }, erro ? 4500 : 2800);
+}
+
+/* ---------------- confirmação ---------------- */
+function confirmar({ titulo, texto, rotulo, perigo = false }) {
+  return new Promise((resolve) => {
+    ultimoFoco = document.activeElement;
+    $('titulo-confirmar').textContent = titulo;
+    $('texto-confirmar').textContent = texto;
+    const b = $('btn-confirmar');
+    b.textContent = rotulo;
+    b.className = 'btn ' + (perigo ? 'btn-perigo' : 'btn-ok');
+    resolverConfirmacao = resolve;
+    $('modal-confirmar').hidden = false;
+    b.focus();
+  });
+}
+function fecharConfirmacao(resultado) {
+  $('modal-confirmar').hidden = true;
+  if (ultimoFoco && document.contains(ultimoFoco)) ultimoFoco.focus();
+  const r = resolverConfirmacao;
+  resolverConfirmacao = null;
+  if (r) r(resultado);
+}
+$('btn-confirmar').addEventListener('click', () => fecharConfirmacao(true));
+$('modal-confirmar').addEventListener('click', (e) => {
+  if (e.target.hasAttribute('data-fechar') || e.target.classList.contains('fundo-modal')) fecharConfirmacao(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !$('modal-confirmar').hidden) fecharConfirmacao(false);
+});
+
+/* ---------------- render ---------------- */
+const STATUS = {
+  fechada:   { selo: 'Fechada',   texto: 'Defina o ano, confira participantes e categorias e abra quando estiver tudo pronto.' },
+  aberta:    { selo: 'Aberta',    texto: 'Categorias e números dos participantes ficam travados até você encerrar.' },
+  encerrada: { selo: 'Encerrada', texto: 'O resultado está congelado no histórico. Comece um novo ano para votar de novo.' },
+};
+
+function render(r) {
+  const { ano, status } = r.eleicao;
+  estado.eleicao = r.eleicao;
+
+  $('qtd-candidatos').textContent = r.candidatos;
+  $('qtd-contas').textContent = r.participantes;
+  $('qtd-categorias').textContent = r.categorias;
+  $('pendentes').hidden = !r.pendentes;
+  $('pendentes').textContent = r.pendentes === 1 ? '1 aguardando' : `${r.pendentes} aguardando`;
+  $('votaram').innerHTML = `${r.votaram} <small>de ${r.eleitores}</small>`;
+
+  const s = STATUS[status] || STATUS.fechada;
+  $('ed-ano').textContent = ano;
+  $('ed-status').textContent = s.selo;
+  $('ed-status').className = 'status-ed ' + status;
+  $('ed-texto').textContent = s.texto;
+  $('btn-abrir').hidden = status !== 'fechada';
+  $('btn-encerrar').hidden = status !== 'aberta';
+  $('form-ano').hidden = status === 'aberta';
+  $('btn-ano').textContent = status === 'encerrada' ? 'Começar novo ano' : 'Definir ano';
+  if (document.activeElement !== $('campo-ano')) $('campo-ano').value = status === 'encerrada' ? ano + 1 : ano;
+}
+
+async function recarregar() {
+  try { render(await api.resumo()); }
+  catch (e) { console.error(e); avisar('Não deu para carregar o resumo.', true); }
+}
+
+/* ---------------- ações da edição ---------------- */
+async function executar(fn, sucesso) {
+  if (estado.ocupado) return;
+  estado.ocupado = true;
+  document.querySelectorAll('.btn-ed').forEach((b) => { b.disabled = true; });
+  try {
+    await fn();
+    await recarregar();
+    avisar(sucesso);
+  } catch (e) {
+    console.error(e);
+    avisar(GGC.msgErro(e, 'Não deu certo. Tente de novo.'), true);
+    await recarregar();
+  } finally {
+    estado.ocupado = false;
+    document.querySelectorAll('.btn-ed').forEach((b) => { b.disabled = false; });
+  }
+}
+
+$('btn-abrir').addEventListener('click', async () => {
+  const { ano } = estado.eleicao;
+  const ok = await confirmar({
+    titulo: `Abrir a votação de ${ano}?`,
+    texto: 'Categorias e números dos participantes ficam travados até você encerrar. Quem já tem conta pode votar na hora.',
+    rotulo: 'Abrir votação',
+  });
+  if (ok) executar(() => api.rpc('abrir_votacao'), 'Votação aberta.');
+});
+
+$('btn-encerrar').addEventListener('click', async () => {
+  const { ano } = estado.eleicao;
+  const ok = await confirmar({
+    titulo: `Encerrar a votação de ${ano}?`,
+    texto: 'Ninguém mais vota e o resultado é congelado no histórico. Não dá para reabrir.',
+    rotulo: 'Encerrar votação',
+    perigo: true,
+  });
+  if (ok) executar(() => api.rpc('encerrar_votacao'), 'Votação encerrada e apuração salva.');
+});
+
+$('form-ano').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const novo = parseInt($('campo-ano').value, 10);
+  const { ano, status } = estado.eleicao;
+  if (!Number.isInteger(novo) || novo < 2000 || novo > 2100) { avisar('Coloque um ano entre 2000 e 2100.', true); return; }
+  if (novo === ano && status !== 'encerrada') { avisar(`A edição já é ${ano}.`); return; }
+  const ok = await confirmar({
+    titulo: status === 'encerrada' ? `Começar ${novo}?` : `Mudar o ano para ${novo}?`,
+    texto: `A edição passa para ${novo} e a votação fica fechada. O resultado de anos encerrados continua no histórico.`,
+    rotulo: status === 'encerrada' ? 'Começar novo ano' : 'Mudar ano',
+  });
+  if (ok) executar(() => api.rpc('definir_ano', { p_ano: novo }), `Edição ${novo} pronta.`);
+});
+
+$('btn-sair').addEventListener('click', () => GGC.sair());
+
+/* ---------------- início ---------------- */
+(async function iniciar() {
+  const { conta } = await GGC.exigirSessao({ roles: ['admin', 'dev'] });
+  const primeiro = String(conta.apelido || conta.nome || '').trim().split(/\s+/)[0] || '';
+  $('ola').textContent = primeiro ? `Olá, ${primeiro}` : 'Olá!';
+  $('iniciais').textContent = (primeiro[0] || '?').toUpperCase();
+  await recarregar();
+
+  // o número de quem já votou e o status acompanham em tempo real
+  sb.channel('menu-admin')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'comparecimento' }, () => { if (!estado.ocupado) recarregar(); })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'eleicao' }, () => { if (!estado.ocupado) recarregar(); })
+    .subscribe();
+})();
+</script>
+</body>
+</html>

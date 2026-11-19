@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Início — GGC Awards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="icon" type="image/jpeg" href="assets/logo_ggc.jpg">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<style>
+  :root{
+    --azul:#0A63AD; --ciano:#2EC4F0; --ciano-claro:#7FE0FF; --amarelo:#FFC21A; --laranja:#FF9F1C;
+    --marinho:#0B2A4A;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--azul);font-family:Nunito,system-ui,sans-serif;color:#fff}
+  a{color:#FFD23F}
+
+  .fundo{position:relative;min-height:100vh;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:88px 16px 48px}
+  .agua{position:absolute;inset:0;background-color:var(--azul);
+    background-image:radial-gradient(circle at 20% 20%,rgba(94,214,255,.55) 0,transparent 45%),
+                     radial-gradient(circle at 80% 85%,rgba(31,168,232,.7) 0,transparent 50%);
+    background-size:160% 160%,160% 160%;animation:ondula 18s ease-in-out infinite}
+  .mancha{position:absolute;border-radius:50%}
+  .m1{width:520px;height:520px;left:8%;top:6%;background:var(--ciano);filter:blur(10px);opacity:.9;animation:deriva1 16s ease-in-out infinite}
+  .m2{width:380px;height:380px;right:14%;top:18%;background:var(--amarelo);opacity:.95;animation:deriva2 19s ease-in-out infinite}
+  .m3{width:460px;height:460px;left:34%;bottom:-12%;background:var(--laranja);opacity:.75;animation:deriva3 22s ease-in-out infinite}
+  .m4{width:300px;height:300px;right:4%;bottom:4%;background:var(--ciano-claro);opacity:.7;animation:deriva1 16s ease-in-out infinite}
+  @keyframes deriva1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(80px,-60px) scale(1.15)}}
+  @keyframes deriva2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-90px,70px) scale(.9)}}
+  @keyframes deriva3{0%,100%{transform:translate(0,0)}50%{transform:translate(50px,90px)}}
+  @keyframes ondula{0%,100%{background-position:0% 0%,100% 100%}50%{background-position:100% 50%,0% 50%}}
+
+  /* chip do usuário */
+  .usuario-box{position:absolute;top:20px;left:20px;right:20px;z-index:2;display:flex;justify-content:flex-end}
+  .usuario{display:inline-flex;align-items:center;gap:10px;padding:6px 6px 6px 8px;border-radius:999px;background:rgba(8,44,88,.34);
+    -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.4)}
+  .usuario .ini{width:32px;height:32px;border-radius:50%;background:var(--amarelo);color:var(--marinho);display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:900}
+  .usuario .nome{font-size:15px;font-weight:700}
+  .sair{min-height:36px;padding:0 14px;border:0;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font:800 14px Nunito,sans-serif;cursor:pointer}
+  .sair:hover{background:rgba(255,255,255,.22)}
+
+  /* card */
+  .vidro{position:relative;z-index:1;width:100%;max-width:500px;padding:44px 36px 32px;border-radius:32px;background:rgba(8,44,88,.34);
+    -webkit-backdrop-filter:blur(26px) saturate(160%);backdrop-filter:blur(26px) saturate(160%);border:1.5px solid rgba(255,255,255,.45);
+    box-shadow:0 30px 60px rgba(4,30,64,.35),inset 0 1px 0 rgba(255,255,255,.5);display:flex;flex-direction:column;align-items:center;gap:24px;text-align:center;
+    animation:entra .6s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes entra{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
+  .ola{margin:0;font-size:20px;font-weight:800}
+  h1{margin:10px 0 0;font-family:'Lilita One',Nunito,sans-serif;font-weight:400;font-size:68px;line-height:.95;color:var(--amarelo);letter-spacing:.01em;
+    -webkit-text-stroke:3px var(--marinho);paint-order:stroke fill;text-shadow:0 5px 0 var(--marinho)}
+
+  .selo{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:var(--marinho);
+    font-size:14px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}
+  .selo::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--ponto,#C98A00)}
+  .selo.aberta{background:#fff;--ponto:#2E9E4F}
+  .selo.aberta::before{animation:pulsa 1.6s ease-in-out infinite}
+  .selo.votou{background:var(--amarelo);--ponto:var(--marinho)}
+  .selo.encerrada{--ponto:#B42318}
+  @keyframes pulsa{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.75)}}
+
+  .ano{display:block;margin-top:12px;font-family:'Lilita One',Nunito,sans-serif;font-size:30px;letter-spacing:.12em;color:#fff;text-shadow:0 3px 0 var(--marinho)}
+  .ano:empty{display:none}
+  .mensagem{margin:0;max-width:360px;font-size:17px;line-height:1.5;font-weight:600}
+
+  .infos{margin:0;padding:0;list-style:none;width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .infos[hidden]{display:none}
+  .infos li{padding:14px 8px;border-radius:16px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);display:flex;flex-direction:column;align-items:center;gap:2px}
+  .infos b{font-family:'Lilita One',Nunito,sans-serif;font-weight:400;font-size:30px;line-height:1;color:var(--amarelo)}
+  .infos span{font-size:13px;font-weight:700}
+
+  .acao{width:100%;min-height:64px;border-radius:20px;display:inline-flex;align-items:center;justify-content:center;gap:12px;
+    font-family:'Lilita One',Nunito,sans-serif;letter-spacing:.02em;text-decoration:none}
+  .acao[hidden]{display:none}
+  .btn-votar{border:3px solid var(--marinho);background:var(--amarelo);color:var(--marinho);font-size:26px;box-shadow:0 5px 0 var(--marinho);
+    transition:transform .1s,filter .15s;animation:brilho 2.2s ease-in-out infinite}
+  .btn-votar:hover{filter:brightness(1.05);color:var(--marinho)}
+  .btn-votar:active{transform:translateY(3px)}
+  @keyframes brilho{0%,100%{box-shadow:0 5px 0 var(--marinho),0 0 0 0 rgba(255,194,26,.55)}50%{box-shadow:0 5px 0 var(--marinho),0 0 0 10px rgba(255,194,26,0)}}
+  .btn-bloqueado{border:2px dashed rgba(255,255,255,.6);background:rgba(255,255,255,.1);color:#fff;font-size:22px;cursor:not-allowed}
+  .btn-bloqueado .ico{display:none}
+  .btn-bloqueado[data-icone="cadeado"] .ico-cadeado,.btn-bloqueado[data-icone="check"] .ico-check{display:block}
+  .btn-votar:focus-visible,.sair:focus-visible{outline:3px solid #fff;outline-offset:3px}
+
+  .dica{margin:0;font-size:14px;font-weight:600;line-height:1.5;color:rgba(255,255,255,.95)}
+
+  @media (max-width:420px){
+    .vidro{padding:34px 22px 26px;border-radius:26px}
+    h1{font-size:54px}
+    .btn-votar{font-size:22px}
+    .btn-bloqueado{font-size:19px}
+  }
+  @media (prefers-reduced-motion: reduce){ .agua,.mancha,.btn-votar,.selo.aberta::before{animation:none} }
+</style>
+</head>
+<body>
+<main class="fundo">
+  <div class="agua" aria-hidden="true"></div>
+  <div class="mancha m1" aria-hidden="true"></div>
+  <div class="mancha m2" aria-hidden="true"></div>
+  <div class="mancha m3" aria-hidden="true"></div>
+  <div class="mancha m4" aria-hidden="true"></div>
+
+  <div class="usuario-box">
+    <div class="usuario">
+      <span class="ini" id="iniciais" aria-hidden="true">?</span>
+      <span class="nome" id="nome-chip"></span>
+      <button class="sair" type="button" id="btn-sair">Sair</button>
+    </div>
+  </div>
+
+  <section class="vidro" aria-labelledby="titulo">
+    <div>
+      <p class="ola" id="ola">E aí!</p>
+      <h1 id="titulo">GGC<br>Awards</h1>
+      <span class="ano" id="ano"></span>
+    </div>
+
+    <span class="selo" id="selo" role="status">Carregando…</span>
+
+    <p class="mensagem" id="mensagem"></p>
+
+    <ul class="infos" id="infos" hidden>
+      <li><b id="qtd-categorias">–</b><span>categorias</span></li>
+      <li><b id="qtd-candidatos">–</b><span>candidatos</span></li>
+      <li><b id="qtd-minutos">–</b><span>minutos</span></li>
+    </ul>
+
+    <a class="acao btn-votar" id="btn-votar" href="urna-eletronica.html" hidden>
+      Começar a votar
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+    </a>
+
+    <button class="acao btn-bloqueado" id="btn-bloqueado" type="button" disabled aria-describedby="dica">
+      <svg class="ico ico-cadeado" aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <svg class="ico ico-check" aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+      <span id="rotulo-bloqueado">Carregando…</span>
+    </button>
+
+    <p class="dica" id="dica"></p>
+  </section>
+</main>
+
+<script>
+/* =====================================================================
+   INÍCIO DO VOTANTE — tela depois do login.
+
+   Estados:
+     fechada   → admin ainda não abriu: botão desabilitado
+     aberta    → botão "Começar a votar" leva para a urna
+     votou     → a pessoa já votou: botão desabilitado "Voto registrado"
+     encerrada → admin encerrou: botão desabilitado
+
+   Fonte: tabela "eleicao" (1 linha), rpc ja_votei(), categorias e rpc candidatos_urna().
+   Esconder o botão é só UX: quem barra voto fora de hora é a função votar() no banco.
+   Sem Supabase configurado (window.sb ausente), dá para testar os estados com
+   inicio.html?estado=fechada | aberta | votou | encerrada
+   ===================================================================== */
+
+const URL_URNA = 'urna-eletronica.html';
+const MODO_TESTE = !window.sb;
+
+const api = MODO_TESTE ? {
+  async usuario() { return { nome: 'Ana Beatriz Lima', apelido: 'Bia' }; },
+  async eleicao() {
+    const p = new URLSearchParams(location.search).get('estado');
+    return { ano: 2026, status: ['fechada', 'aberta', 'encerrada'].includes(p) ? p : 'fechada' };
+  },
+  async jaVotou() { return new URLSearchParams(location.search).get('estado') === 'votou'; },
+  async resumo() { return { categorias: 7, candidatos: 18 }; },
+  observar() {},
+  async sair() {},
+} : {
+  async eleicao() {
+    const { data, error } = await sb.from('eleicao').select('ano, status').eq('id', 1).single();
+    if (error) throw error;
+    return data;
+  },
+  async jaVotou() {
+    const { data, error } = await sb.rpc('ja_votei');
+    if (error) throw error;
+    return !!data;
+  },
+  async resumo() {
+    const [c, k] = await Promise.all([
+      sb.from('categorias').select('id', { count: 'exact', head: true }),
+      sb.rpc('candidatos_urna'),
+    ]);
+    if (c.error) throw c.error;
+    if (k.error) throw k.error;
+    return { categorias: c.count || 0, candidatos: (k.data || []).length };
+  },
+  // O admin muda a eleição (abre, encerra, novo ano): o botão libera sozinho
+  observar(aoMudar) {
+    sb.channel('eleicao-inicio')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'eleicao' }, () => aoMudar())
+      .subscribe();
+  },
+  async sair() { await GGC.sair(); },
+};
+
+const ESTADOS = {
+  fechada: {
+    selo: 'Votação fechada',
+    mensagem: 'A urna ainda está lacrada. Assim que o admin abrir a votação, o botão libera aqui.',
+    rotulo: 'Votação ainda não abriu',
+    dica: 'Não precisa recarregar: a página atualiza sozinha.',
+    icone: 'cadeado',
+    infos: true,
+  },
+  aberta: {
+    selo: 'Votação aberta',
+    mensagem: 'A urna está aberta. Digite o número do seu escolhido em cada categoria e aperte CONFIRMA.',
+    dica: 'Depois de confirmar, não dá para mudar o voto.',
+    infos: true,
+  },
+  votou: {
+    selo: 'Você já votou',
+    mensagem: 'Seu voto foi registrado em todas as categorias. Agora é esperar a apuração.',
+    rotulo: 'Voto registrado',
+    dica: 'Cada pessoa vota uma vez só.',
+    icone: 'check',
+    infos: false,
+  },
+  encerrada: {
+    selo: 'Votação encerrada',
+    mensagem: 'A votação acabou. Os vencedores vão ser revelados na premiação.',
+    rotulo: 'Votação encerrada',
+    dica: 'Quem não votou dessa vez fica pro ano que vem.',
+    icone: 'cadeado',
+    infos: false,
+  },
+};
+
+const estado = { status: 'fechada', votou: false, ano: null };
+const $ = (id) => document.getElementById(id);
+
+function render() {
+  const chave = estado.votou ? 'votou' : estado.status;
+  const e = ESTADOS[chave] || ESTADOS.fechada;
+  const aberta = chave === 'aberta';
+
+  $('selo').className = `selo ${chave}`;
+  $('selo').textContent = e.selo;
+  $('mensagem').textContent = e.mensagem;
+  $('infos').hidden = !e.infos;
+  $('dica').textContent = e.dica;
+
+  $('btn-votar').hidden = !aberta;
+  $('btn-bloqueado').hidden = aberta;
+  $('btn-bloqueado').dataset.icone = e.icone || '';
+  $('rotulo-bloqueado').textContent = e.rotulo || '';
+
+  $('ano').textContent = estado.ano || '';
+  document.title = estado.ano ? `Início — GGC Awards ${estado.ano}` : 'Início — GGC Awards';
+}
+
+$('btn-sair').addEventListener('click', async () => { await api.sair(); location.href = 'login.html'; });
+
+async function atualizarEstado() {
+  const [el, votou] = await Promise.all([api.eleicao(), api.jaVotou()]);
+  Object.assign(estado, { status: el.status, ano: el.ano, votou });
+}
+
+(async function iniciar() {
+  $('btn-votar').href = URL_URNA;
+  let usuario = { nome: '', apelido: '' };
+  if (!MODO_TESTE) {
+    const s = await GGC.exigirSessao();   // qualquer role logada
+    usuario = s.conta;
+  } else {
+    usuario = await api.usuario();
+    GGC.liberarPagina();
+  }
+
+  const apelido = (usuario.apelido || String(usuario.nome || '').split(' ')[0] || '').trim();
+  $('ola').textContent = apelido ? `E aí, ${apelido}!` : 'E aí!';
+  $('nome-chip').textContent = apelido;
+  $('iniciais').textContent = (apelido[0] || '?').toUpperCase();
+
+  try {
+    const [, resumo] = await Promise.all([atualizarEstado(), api.resumo()]);
+    $('qtd-categorias').textContent = resumo.categorias;
+    $('qtd-candidatos').textContent = resumo.candidatos;
+    $('qtd-minutos').textContent = '~' + Math.max(1, Math.round(resumo.categorias * 0.4));
+  } catch (err) {
+    console.error(err);
+    $('dica').textContent = 'Não deu para carregar. Recarregue a página.';
+  }
+  render();
+  api.observar(async () => {
+    try { await atualizarEstado(); render(); } catch (err) { console.error(err); }
+  });
+})();
+</script>
+</body>
+</html>

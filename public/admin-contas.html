@@ -1,0 +1,806 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Participantes — GGC Awards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/jpeg" href="assets/logo_ggc.jpg">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<style>
+  :root{
+    --bg:#E7E9E4; --ink:#15180F; --muted:#4F554B; --muted2:#3E423A; --card:#fff; --line:#E3E6DF; --line2:#EEF0EB;
+    --borda:#C9CEC3; --campo:#FAFBF8; --foco:#1F5FBF; --ok:#35A55A; --ok-sombra:#1B6332; --perigo:#B42318;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif}
+  button,input,textarea{font-family:inherit}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  .pagina{min-height:100vh;padding:32px 24px 64px}
+  .wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+
+  .topo{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 24px}
+  .topo .sobre{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  h1{margin:4px 0;font-family:'Space Grotesk',Inter,sans-serif;font-size:36px;line-height:1.1}
+  .resumo{font-size:15px;color:var(--muted)}
+
+  .info{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:14px;background:#fff;border:1.5px solid #D5DACF;font-size:14px;line-height:1.5;color:var(--muted2)}
+  .info svg{flex:0 0 auto;margin-top:1px}
+  .info strong{color:var(--ink)}
+
+  .btn{min-height:46px;padding:0 18px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:10px;
+    transition:background .15s,transform .06s}
+  .btn:active{transform:translateY(1px)}
+  .btn:focus-visible,.icone:focus-visible,.seg:focus-visible,.desfazer:focus-visible{outline:3px solid var(--foco);outline-offset:2px}
+  .btn-escuro{min-height:48px;padding:0 20px;border:0;border-radius:12px;background:var(--ink);color:#fff}
+  .btn-escuro:hover{background:#2A2E24}
+  .btn-claro{border:1.5px solid var(--borda);background:#fff;color:var(--ink)}
+  .btn-claro:hover{background:#F2F5F0}
+  .btn-ok{border:0;padding:0 22px;background:var(--ok);color:#0B1A0F;font-weight:700;box-shadow:0 3px 0 var(--ok-sombra)}
+  .btn-ok:hover{background:#2F9550}
+  .btn-ok:disabled{opacity:.7;cursor:wait}
+  .btn-perigo{border:0;background:var(--perigo);color:#fff;font-weight:700}
+  .btn-perigo:hover{background:#951B12}
+
+  /* card da lista */
+  .card{background:var(--card);border-radius:18px;box-shadow:0 10px 30px rgba(30,35,25,.10);overflow:hidden}
+  .barra{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
+  .busca-box{flex:1 1 280px;max-width:420px;position:relative;display:flex}
+  .busca-box svg{position:absolute;left:14px;top:13px}
+  .campo{width:100%;padding:0 14px;border:1.5px solid var(--borda);border-radius:10px;font-size:15px;color:var(--ink);background:var(--campo)}
+  .campo:focus{outline:none;border-color:var(--foco);box-shadow:0 0 0 3px rgba(31,95,191,.18)}
+  .campo.invalido{border-color:var(--perigo)}
+  .busca-box .campo{height:44px;padding-left:40px}
+  textarea.campo{padding:12px 14px;line-height:1.5;resize:vertical}
+  .filtro{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px;font-weight:600;color:var(--muted2)}
+
+  /* segmentado (filtros, papéis) */
+  .segmentos{display:inline-flex;flex-wrap:wrap;padding:4px;border-radius:12px;background:var(--line2);gap:4px}
+  .seg{min-height:36px;padding:0 12px;border:0;border-radius:9px;font-size:14px;font-weight:600;background:transparent;color:var(--muted);cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;gap:6px}
+  .seg .qtd{font-size:12px;font-weight:700;color:var(--muted)}
+  .seg[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(21,24,15,.15)}
+  .seg.admin[aria-pressed="true"]{background:var(--ink);color:#fff}
+  .seg:disabled{cursor:not-allowed;color:#9AA094}
+  .papeis{padding:3px;border-radius:10px;gap:3px}
+  .papeis .seg{min-height:34px;min-width:76px;font-size:13px;border-radius:8px}
+  .papeis-novo .seg{min-height:40px;min-width:100px;padding:0 16px}
+
+  .lista{max-height:660px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#B9BEB4 transparent}
+  .linha{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;padding:12px 20px;border-bottom:1px solid var(--line2);transition:background .15s}
+  .linha:hover{background:#F7F9F5}
+  .pessoa{flex:1 1 260px;min-width:0;display:flex;align-items:center;gap:14px}
+  .avatar{width:44px;height:44px;border-radius:50%;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;background:#2F5D8A}
+  .avatar.admin{background:var(--ink)}
+  .avatar.pendente{background:#fff;color:var(--muted);border:1.5px dashed #9AA094}
+  .pessoa-txt{min-width:0;display:flex;flex-direction:column;gap:2px}
+  .pessoa-nome{display:flex;align-items:center;gap:8px;min-width:0}
+  .pessoa-nome b{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pessoa-nome b.sem{color:var(--muted)}
+  .voce{flex:0 0 auto;padding:2px 8px;border-radius:999px;background:var(--line2);font-size:12px;font-weight:700;color:var(--muted2)}
+  .email{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .status{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:13px;font-weight:600;background:#E6F4EA;color:#1E6B3A}
+  .status::before{content:"";width:7px;height:7px;border-radius:50%;background:#2E8A4C}
+  .status.pendente{background:#FFF4D6;color:#6E4A00}
+  .status.pendente::before{background:#C98A00}
+  .acoes{flex:0 0 auto;display:inline-flex;align-items:center;gap:4px}
+  .icone{width:44px;height:44px;border:0;border-radius:10px;background:transparent;color:var(--ink);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s}
+  .icone:hover{background:#EEF1EB}
+  .icone.perigo{color:var(--perigo)}
+  .icone.perigo:hover{background:#FDECEA;color:#951B12}
+  .icone:disabled{cursor:not-allowed;opacity:.35}
+  .icone:disabled:hover{background:transparent}
+  .vazio{padding:48px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;color:var(--muted);font-size:14px}
+  .vazio b{font-size:16px;font-weight:600;color:var(--ink)}
+
+  /* modais */
+  .fundo-modal{position:fixed;inset:0;z-index:20;background:rgba(21,24,15,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+  .fundo-modal[hidden]{display:none}
+  .modal{width:100%;max-width:540px;max-height:92vh;overflow-y:auto;background:#fff;border-radius:20px;box-shadow:0 30px 70px rgba(21,24,15,.3);
+    display:flex;flex-direction:column;animation:surge .2s cubic-bezier(.2,.8,.2,1) both}
+  .modal.pequeno{max-width:440px;padding:24px;gap:16px}
+  @keyframes surge{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
+  .modal-topo{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 24px;border-bottom:1px solid var(--line)}
+  .modal h2{margin:0;font-family:'Space Grotesk',Inter,sans-serif;font-size:22px}
+  .modal-corpo{padding:20px 24px;display:flex;flex-direction:column;gap:18px}
+  .modal-rodape{display:flex;justify-content:flex-end;gap:10px;padding:16px 24px 20px;border-top:1px solid var(--line);flex-wrap:wrap}
+  .modal.pequeno .modal-rodape{padding:0;border:0}
+  .modal.pequeno p{margin:0;font-size:15px;line-height:1.5;color:var(--muted2)}
+  .modal.pequeno strong{color:var(--ink)}
+  .grupo{display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:600}
+  .ajuda{font-size:13px;font-weight:400;color:var(--muted)}
+  .ajuda.erro{color:var(--perigo);font-weight:500}
+  .previa-titulo{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:13px;font-weight:500;border:1px solid}
+  .chip small{font-size:12px;font-weight:700}
+  .chip.novo{background:#E6F4EA;color:#1E6B3A;border-color:#BFE3CB}
+  .chip.existe,.chip.repetido{background:var(--line2);color:var(--muted);border-color:#D5DACF}
+  .chip.invalido{background:#FDECEA;color:#A3201B;border-color:#F4C7C2}
+
+  /* aviso */
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:30;max-width:calc(100% - 32px);padding:8px 8px 8px 18px;border-radius:12px;
+    background:var(--ink);color:#fff;font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:12px;box-shadow:0 12px 30px rgba(21,24,15,.3);animation:sobe .2s ease both}
+  .toast[hidden]{display:none}
+  .toast svg{flex:0 0 auto}
+  .toast.erro svg{stroke:#FF8A80}
+  .desfazer{min-height:36px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:#FFD23F;font-size:14px;font-weight:700;cursor:pointer}
+  .desfazer:hover{background:rgba(255,255,255,.14)}
+  .desfazer[hidden]{display:none}
+  @keyframes sobe{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+
+  /* participantes (modal herdado de candidatos) */
+  a.sobre.voltar{display:inline-block;text-decoration:none}
+  a.sobre.voltar:hover{color:var(--ink)}
+  input.campo{height:46px}
+  .info.aviso{background:#FFF4D6;border-color:#E8C766}
+  .info[hidden]{display:none}
+  img.avatar{object-fit:cover}
+  .apelido{font-size:13px;color:var(--muted);white-space:nowrap}
+  .selo-dev{display:inline-flex;align-items:center;min-height:34px;padding:0 12px;border-radius:999px;background:var(--ink);color:#fff;font-size:13px;font-weight:700}
+  .num{flex:0 0 auto;min-width:44px;height:34px;padding:0 8px;border-radius:8px;background:var(--ink);color:#fff;display:inline-flex;align-items:center;justify-content:center;font:700 18px Arial,sans-serif;letter-spacing:.04em}
+  .sem-num{flex:0 0 auto;font-size:13px;color:var(--muted)}
+  .opcional{font-weight:400;color:var(--muted)}
+  .numero-linha{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .caixas{position:relative;display:inline-flex;gap:6px}
+  .caixa{width:48px;height:60px;border:2px solid var(--borda);display:inline-flex;align-items:center;justify-content:center;font:700 36px Arial,sans-serif;background:#F7F8F3}
+  .caixas.invalido .caixa{border-color:var(--perigo)}
+  .caixas.travado{opacity:.55}
+  .caixas:focus-within{outline:3px solid rgba(31,95,191,.35);outline-offset:4px;border-radius:6px}
+  .caixas:focus-within .caixa.atual{animation:cursor .9s steps(1) infinite;border-color:#111}
+  @keyframes cursor{0%,49%{border-color:#111}50%,100%{border-color:var(--borda)}}
+  .caixas input{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;padding:0;cursor:text}
+  .foto-linha{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .foto-grande{width:72px;height:72px;border-radius:50%;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff;object-fit:cover}
+  img.foto-grande{border:2px solid var(--line)}
+  .seletor{position:relative;min-height:46px;padding:0 16px;border:1.5px solid var(--borda);border-radius:10px;background:#fff;color:var(--ink);font-size:15px;font-weight:600;
+    display:inline-flex;align-items:center;gap:8px;cursor:pointer;transition:background .15s}
+  .seletor:hover{background:#F2F5F0}
+  .seletor:focus-within{outline:3px solid var(--foco);outline-offset:2px}
+  .seletor input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;left:0;top:0}
+  .btn-texto-perigo{border:0;background:transparent;color:var(--perigo);padding:0 14px}
+  .btn-texto-perigo:hover{background:#FDECEA}
+  .previa{display:flex;align-items:center;gap:14px;padding:10px 12px;border:1.5px solid #2E8A4C;border-radius:12px;background:#E6F4EA}
+  .avatar-previa{width:48px;height:48px;border-radius:50%;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;object-fit:cover}
+  .nome-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .nome-txt b,.nome-txt span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nome-txt b{font-size:15px;font-weight:600}
+  .nome-txt span{font-size:13px;color:var(--muted)}
+  #grupo-papel[hidden]{display:none}
+  .seg:disabled{cursor:not-allowed;color:#9AA094}
+  #bloco-foto-ajuda{margin:0}
+
+  @media (max-width:560px){
+    .pagina{padding:24px 16px 48px}
+    h1{font-size:30px}
+    .linha{padding:12px}
+  }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <div class="wrap">
+    <header class="topo">
+      <div>
+        <a class="sobre voltar" href="admin-menu.html">← GGC Awards · Admin</a>
+        <h1>Participantes</h1>
+        <span class="resumo" id="resumo"></span>
+      </div>
+      <button class="btn btn-escuro" type="button" id="btn-adicionar">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+        Novo participante
+      </button>
+    </header>
+
+    <div class="info">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#15180F" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <span><strong>Só e-mails desta lista conseguem criar conta.</strong> Quem foi adicionado e ainda não se cadastrou aparece como “Aguardando cadastro”. Quem tem número é candidato em todas as categorias. O papel vale a partir do próximo login.</span>
+    </div>
+
+    <div class="info aviso" id="aviso-aberta" hidden>
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6E4A00" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5v.01"/></svg>
+      <span><strong>Votação aberta.</strong> Números e remoções ficam travados até o encerramento. Nome, apelido, foto e papel continuam editáveis.</span>
+    </div>
+
+    <section class="card" aria-label="Lista de participantes">
+      <div class="barra">
+        <label class="busca-box">
+          <span class="sr">Buscar participante</span>
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4F554B" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <input class="campo" id="busca" type="search" placeholder="Buscar por nome, apelido, e-mail ou número" autocomplete="off">
+        </label>
+        <div class="filtro">
+          <span id="rotulo-filtro">Mostrar</span>
+          <div class="segmentos" id="filtros" role="group" aria-labelledby="rotulo-filtro"></div>
+        </div>
+      </div>
+      <div class="lista" id="lista"></div>
+    </section>
+  </div>
+</div>
+
+<!-- MODAL: criar / editar participante -->
+<div class="fundo-modal" id="modal-form" hidden>
+  <form class="modal" id="form" role="dialog" aria-modal="true" aria-labelledby="titulo-form" novalidate>
+    <div class="modal-topo">
+      <h2 id="titulo-form">Novo participante</h2>
+      <button class="icone" type="button" data-fechar aria-label="Fechar">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="modal-corpo">
+      <label class="grupo">E-mail
+        <input class="campo" id="campo-email" type="email" autocomplete="off" placeholder="bia@email.com" aria-describedby="ajuda-email">
+        <span class="ajuda" id="ajuda-email"></span>
+      </label>
+
+      <label class="grupo">Nome completo
+        <input class="campo" id="campo-nome" type="text" autocomplete="off" placeholder="Ex.: Ana Beatriz Lima" aria-describedby="erro-nome">
+        <span class="ajuda erro" id="erro-nome" hidden></span>
+      </label>
+
+      <label class="grupo">
+        <span>Apelido <span class="opcional">(opcional)</span></span>
+        <input class="campo" id="campo-apelido" type="text" autocomplete="off" placeholder="Ex.: Bia">
+      </label>
+
+      <div class="grupo">
+        <label for="campo-numero">Número na urna <span class="opcional">(opcional)</span></label>
+        <div class="numero-linha">
+          <div class="caixas" id="caixas">
+            <span class="caixa" aria-hidden="true"></span>
+            <span class="caixa" aria-hidden="true"></span>
+            <input id="campo-numero" type="text" inputmode="numeric" autocomplete="off" maxlength="2" aria-describedby="ajuda-numero">
+          </div>
+          <span class="ajuda" id="ajuda-numero" style="max-width:300px"></span>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <span id="rotulo-foto">Foto <span class="opcional">(opcional, sem foto aparecem as iniciais)</span></span>
+        <div class="foto-linha">
+          <span id="foto-grande"></span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <label class="seletor">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-8 8"/></svg>
+              <span id="rotulo-seletor">Escolher foto</span>
+              <input id="campo-foto" type="file" accept="image/*" aria-labelledby="rotulo-foto">
+            </label>
+            <button class="btn btn-texto-perigo" type="button" id="btn-remover-foto" hidden>Remover</button>
+          </div>
+        </div>
+        <span class="ajuda" id="ajuda-foto"></span>
+      </div>
+
+      <div class="grupo" id="grupo-papel">
+        <span id="rotulo-papel-novo">Papel</span>
+        <div class="segmentos papeis-novo" id="papeis-novo" role="group" aria-labelledby="rotulo-papel-novo" style="align-self:flex-start">
+          <button class="seg" type="button" data-papel-novo="votante" aria-pressed="true">Votante</button>
+          <button class="seg admin" type="button" data-papel-novo="admin" aria-pressed="false">Admin</button>
+        </div>
+        <span class="ajuda" id="descricao-papel"></span>
+      </div>
+
+      <div class="grupo">
+        <span class="previa-titulo">Como aparece na urna</span>
+        <div class="previa" id="previa"></div>
+        <span class="ajuda" id="ajuda-previa"></span>
+      </div>
+    </div>
+
+    <div class="modal-rodape">
+      <button class="btn btn-claro" type="button" data-fechar>Cancelar</button>
+      <button class="btn btn-ok" type="submit" id="btn-salvar">Cadastrar</button>
+    </div>
+  </form>
+</div>
+
+<!-- MODAL: remover -->
+<div class="fundo-modal" id="modal-remover" hidden>
+  <div class="modal pequeno" role="alertdialog" aria-modal="true" aria-labelledby="titulo-remover" aria-describedby="texto-remover">
+    <h2 id="titulo-remover"></h2>
+    <p id="texto-remover"></p>
+    <div class="modal-rodape">
+      <button class="btn btn-claro" type="button" data-fechar>Cancelar</button>
+      <button class="btn btn-perigo" type="button" id="btn-confirmar-remocao">Remover</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden>
+  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4CD07D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+  <span id="toast-texto"></span>
+  <button class="desfazer" type="button" id="btn-desfazer" hidden>Desfazer</button>
+</div>
+
+<script>
+/* =====================================================================
+   PARTICIPANTES (só admin e dev) = contas = candidatos.
+
+   Tabela "contas": id | email (minúsculo, único) | nome | apelido | numero (2 dígitos, único, opcional)
+                    | foto_url | role ('votante'|'admin'|'dev') | user_id (nulo até a pessoa criar a conta)
+   Quem tem número é candidato em todas as categorias. "Ativo" = user_id preenchido.
+   Todas as travas abaixo (dev, si mesmo, último admin, votação aberta) também valem no banco
+   (trigger proteger_contas); aqui só avisamos antes.
+   Fotos: bucket público "fotos", caminho contas/<id>-<timestamp>.<ext>.
+   ===================================================================== */
+
+const BUCKET = 'fotos';
+const COLUNAS = 'id, email, nome, apelido, numero, foto_url, role, user_id, criado_em';
+
+const api = {
+  async status() {
+    const { data, error } = await sb.from('eleicao').select('status').eq('id', 1).single();
+    if (error) throw error;
+    return data.status;
+  },
+  async listar() {
+    const { data, error } = await sb.from('contas').select(COLUNAS).order('criado_em');
+    if (error) throw error;
+    return data;
+  },
+  async criar(reg) {
+    const { data, error } = await sb.from('contas').insert(reg).select(COLUNAS).single();
+    if (error) throw error;
+    return data;
+  },
+  async atualizar(id, reg) {
+    const { data, error } = await sb.from('contas').update(reg).eq('id', id).select(COLUNAS);
+    if (error) throw error;
+    if (!data || !data.length) throw new Error('Sem permissão para alterar este participante.');
+    return data[0];
+  },
+  async remover(id) {
+    const { error } = await sb.rpc('remover_conta', { p_id: id });
+    if (error) throw error;
+  },
+  async enviarFoto(arquivo, id) {
+    const ext = ((arquivo.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5)) || 'jpg';
+    const caminho = `contas/${id}-${Date.now()}.${ext}`;
+    const { error } = await sb.storage.from(BUCKET).upload(caminho, arquivo, { contentType: arquivo.type || undefined });
+    if (error) throw error;
+    return { caminho, url: sb.storage.from(BUCKET).getPublicUrl(caminho).data.publicUrl };
+  },
+  async apagarFoto(url) {
+    const parte = String(url || '').split('/object/public/' + BUCKET + '/')[1];
+    if (!parte) return;
+    const { error } = await sb.storage.from(BUCKET).remove([decodeURIComponent(parte.split('?')[0])]);
+    if (error) console.warn('Não apagou a foto antiga:', error.message);
+  },
+};
+
+const PAPEIS = [['votante', 'Votante'], ['admin', 'Admin']];
+const FILTROS = [['todas', 'Todas'], ['admin', 'Admins'], ['votante', 'Votantes'], ['pendente', 'Aguardando'], ['semnumero', 'Sem número']];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const FOTO_MAX_MB = 5;
+const CORES_AVATAR = ['#2F5D8A','#7A3E8E','#A0442C','#2E7D5B','#8A6A1F','#3B4A9C','#9C2F5A','#256C78','#5E6B21','#6B3FA0'];
+const AJUDA_NUMERO = 'Dois dígitos, como na urna. Sem número, a pessoa só vota e não aparece como candidata.';
+const AJUDA_FOTO = 'No celular abre a galeria ou a câmera. JPG, PNG ou WEBP de até 5 MB.';
+
+const estado = {
+  euId: '',
+  status: 'fechada',
+  contas: [],
+  busca: '',
+  filtro: 'todas',
+  form: null,     // { modo, id, ativo, email, nome, apelido, numero, role, roleOriginal, foto_url, fotoArquivo, fotoPrevia, dev, trava }
+  removendo: null,
+  ocupado: false,
+};
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const ativo = (c) => !!c.user_id;
+const aberta = () => estado.status === 'aberta';
+const ehAdmin = (c) => c.role === 'admin' || c.role === 'dev';
+const nomeDe = (c) => c.nome || c.email;
+const cor = (numero) => { const n = parseInt(numero, 10); return CORES_AVATAR[(isNaN(n) ? 0 : n) % CORES_AVATAR.length]; };
+const iniciaisDe = (texto) => {
+  const p = String(texto || '').trim().split(/[\s._-]+/).filter(Boolean);
+  return ((p[0] || '?')[0] + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase();
+};
+
+function avatarLinha(c) {
+  if (c.foto_url) return `<img class="avatar" src="${esc(c.foto_url)}" alt="">`;
+  const classe = !ativo(c) ? 'pendente' : ehAdmin(c) ? 'admin' : '';
+  return `<span class="avatar ${classe}" aria-hidden="true">${esc(iniciaisDe(c.nome || c.email.split('@')[0]))}</span>`;
+}
+const avatarModal = (foto, nome, numero, classe) => foto
+  ? `<img class="${classe}" src="${esc(foto)}" alt="">`
+  : `<span class="${classe}" aria-hidden="true" style="background:${cor(numero)}">${esc(iniciaisDe(nome))}</span>`;
+
+let ultimoFoco = null;
+let timerToast;
+let acaoDesfazer = null;
+
+/* ---------------- aviso ---------------- */
+function avisar(msg, { erro = false, desfazer = null } = {}) {
+  clearTimeout(timerToast);
+  acaoDesfazer = desfazer;
+  $('toast-texto').textContent = msg;
+  $('toast').classList.toggle('erro', erro);
+  $('btn-desfazer').hidden = !desfazer;
+  $('toast').hidden = false;
+  timerToast = setTimeout(esconderAviso, desfazer ? 5000 : erro ? 4500 : 2800);
+}
+function esconderAviso() {
+  clearTimeout(timerToast);
+  acaoDesfazer = null;
+  $('toast').hidden = true;
+}
+
+/* ---------------- regras (espelham o trigger proteger_contas) ---------------- */
+function travaDe(c) {
+  if (c.role === 'dev') return 'O papel dev só muda direto no banco.';
+  if (c.id === estado.euId) return 'Você não pode mudar o próprio papel nem se remover.';
+  if (c.role === 'admin' && !estado.contas.some((x) => x.id !== c.id && ehAdmin(x))) return 'Precisa ter pelo menos um admin.';
+  return '';
+}
+const travaRemocao = (c) => travaDe(c) || (aberta() ? 'Com a votação aberta não dá para remover participantes.' : '');
+
+/* ---------------- lista ---------------- */
+function render() {
+  const total = estado.contas.length;
+  const pendentes = estado.contas.filter((c) => !ativo(c)).length;
+  const admins = estado.contas.filter(ehAdmin).length;
+  const candidatos = estado.contas.filter((c) => c.numero).length;
+  const contagem = {
+    todas: total, admin: admins, votante: total - admins, pendente: pendentes, semnumero: total - candidatos,
+  };
+
+  $('resumo').textContent = `${total} participantes · ${candidatos} candidatos · ${pendentes} aguardando cadastro · ${admins} ${admins === 1 ? 'admin' : 'admins'}`;
+  $('aviso-aberta').hidden = !aberta();
+
+  $('filtros').innerHTML = FILTROS.map(([id, rotulo]) =>
+    `<button class="seg" type="button" data-filtro="${id}" aria-pressed="${estado.filtro === id}">${rotulo} <span class="qtd">${contagem[id]}</span></button>`
+  ).join('');
+
+  const regras = {
+    todas: () => true,
+    admin: ehAdmin,
+    votante: (c) => !ehAdmin(c),
+    pendente: (c) => !ativo(c),
+    semnumero: (c) => !c.numero,
+  };
+  const termo = estado.busca.trim().toLowerCase();
+  const lista = estado.contas
+    .filter(regras[estado.filtro])
+    .filter((c) => !termo || c.email.includes(termo) || (c.nome || '').toLowerCase().includes(termo) ||
+      (c.apelido || '').toLowerCase().includes(termo) || (c.numero || '').includes(termo))
+    .sort((a, b) =>
+      (a.id === estado.euId ? -1 : b.id === estado.euId ? 1 : 0) ||
+      (ehAdmin(a) === ehAdmin(b) ? 0 : ehAdmin(a) ? -1 : 1) ||
+      nomeDe(a).localeCompare(nomeDe(b), 'pt-BR'));
+
+  if (!lista.length) {
+    $('lista').innerHTML = `<div class="vazio"><b>Ninguém aqui</b>Tente outra busca ou outro filtro.</div>`;
+    return;
+  }
+
+  $('lista').innerHTML = lista.map((c) => {
+    const trava = travaDe(c);
+    const travaRem = travaRemocao(c);
+    const pessoa = esc(nomeDe(c));
+    const papeis = c.role === 'dev'
+      ? `<span class="selo-dev" title="${esc(trava)}">Dev</span>`
+      : `<div class="segmentos papeis" role="group" aria-label="Papel de ${pessoa}" ${trava ? `title="${esc(trava)}"` : ''}>${
+          PAPEIS.map(([id, rotulo]) => {
+            const sel = c.role === id;
+            return `<button class="seg ${id}" type="button" data-papel="${id}" data-id="${esc(c.id)}" aria-pressed="${sel}" ${trava && !sel ? 'disabled' : ''}>${rotulo}</button>`;
+          }).join('')}</div>`;
+    return `
+      <div class="linha">
+        <div class="pessoa">
+          ${avatarLinha(c)}
+          <span class="pessoa-txt">
+            <span class="pessoa-nome">
+              <b>${esc(c.nome)}</b>
+              ${c.apelido ? `<span class="apelido">“${esc(c.apelido)}”</span>` : ''}
+              ${c.id === estado.euId ? '<span class="voce">Você</span>' : ''}
+            </span>
+            <span class="email">${esc(c.email)}</span>
+          </span>
+        </div>
+        ${c.numero ? `<span class="num" title="Número na urna">${esc(c.numero)}</span>` : '<span class="sem-num">Sem número</span>'}
+        <span class="status ${ativo(c) ? '' : 'pendente'}">${ativo(c) ? 'Ativo' : 'Aguardando cadastro'}</span>
+        <div class="acoes">
+          ${papeis}
+          <button class="icone" type="button" data-editar="${esc(c.id)}" aria-label="Editar ${pessoa}">
+            <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>
+          </button>
+          <button class="icone perigo" type="button" data-remover="${esc(c.id)}" ${travaRem ? 'disabled' : ''}
+            aria-label="Remover ${pessoa}" title="${esc(travaRem || (ativo(c) ? 'Remover acesso' : 'Remover convite'))}">
+            <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg>
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+/* ---------------- mudar papel ---------------- */
+async function trocarPapel(id, role, { silencioso = false } = {}) {
+  const c = estado.contas.find((x) => x.id === id);
+  if (!c || c.role === role || travaDe(c)) return;
+  const antes = c.role;
+  try {
+    const nova = await api.atualizar(id, { role });
+    Object.assign(c, nova);
+    render();
+    if (!silencioso) {
+      avisar(`${nomeDe(c)} agora é ${role === 'admin' ? 'admin' : 'votante'}.`, {
+        desfazer: () => trocarPapel(id, antes, { silencioso: true }),
+      });
+    }
+  } catch (e) {
+    console.error(e);
+    avisar(GGC.msgErro(e, 'Não deu para mudar o papel. Tente de novo.'), { erro: true });
+  }
+}
+
+/* ---------------- modais ---------------- */
+function abrirModal(id) {
+  ultimoFoco = document.activeElement;
+  $(id).hidden = false;
+}
+function fecharModais() {
+  $('modal-form').hidden = true;
+  $('modal-remover').hidden = true;
+  const f = estado.form;
+  if (f && f.fotoPrevia && f.fotoArquivo) URL.revokeObjectURL(f.fotoPrevia);
+  estado.form = null;
+  estado.removendo = null;
+  if (ultimoFoco && document.contains(ultimoFoco)) ultimoFoco.focus();
+}
+
+/* ---------------- formulário ---------------- */
+function abrirForm(c) {
+  const dev = !!c && c.role === 'dev';
+  estado.form = c
+    ? { modo: 'editar', id: c.id, ativo: ativo(c), email: c.email, nome: c.nome || '', apelido: c.apelido || '', numero: c.numero || '',
+        role: c.role, roleOriginal: c.role, foto_url: c.foto_url || '', fotoArquivo: null, fotoPrevia: c.foto_url || '',
+        dev, trava: travaDe(c) }
+    : { modo: 'novo', id: null, ativo: false, email: '', nome: '', apelido: '', numero: '',
+        role: 'votante', roleOriginal: 'votante', foto_url: '', fotoArquivo: null, fotoPrevia: '', dev: false, trava: '' };
+  const f = estado.form;
+  $('titulo-form').textContent = c ? 'Editar participante' : 'Novo participante';
+  $('btn-salvar').textContent = c ? 'Salvar alterações' : 'Cadastrar';
+  $('campo-email').value = f.email;
+  $('campo-email').disabled = f.ativo;
+  $('campo-numero').value = f.numero;
+  $('campo-numero').disabled = aberta();
+  $('caixas').classList.toggle('travado', aberta());
+  $('campo-nome').value = f.nome;
+  $('campo-apelido').value = f.apelido;
+  $('grupo-papel').hidden = f.dev;
+  limparErros();
+  renderForm();
+  abrirModal('modal-form');
+  (f.ativo ? $('campo-nome') : $('campo-email')).focus();
+}
+
+function limparErros() { setErroEmail(''); setErroNumero(''); setErroNome(''); setErroFoto(''); }
+function setErroEmail(msg) {
+  const f = estado.form;
+  $('campo-email').classList.toggle('invalido', !!msg);
+  $('ajuda-email').classList.toggle('erro', !!msg);
+  $('ajuda-email').textContent = msg || (f && f.ativo
+    ? 'O e-mail de uma conta ativa não pode ser alterado.'
+    : 'Só esse e-mail consegue criar a conta no login.');
+}
+function setErroNumero(msg) {
+  $('caixas').classList.toggle('invalido', !!msg);
+  $('ajuda-numero').classList.toggle('erro', !!msg);
+  $('ajuda-numero').textContent = msg || (aberta() ? 'Com a votação aberta o número fica travado.' : AJUDA_NUMERO);
+}
+function setErroNome(msg) {
+  $('campo-nome').classList.toggle('invalido', !!msg);
+  $('erro-nome').hidden = !msg;
+  $('erro-nome').textContent = msg;
+}
+function setErroFoto(msg) {
+  $('ajuda-foto').classList.toggle('erro', !!msg);
+  $('ajuda-foto').textContent = msg || AJUDA_FOTO;
+}
+
+function renderForm() {
+  const f = estado.form;
+  if (!f) return;
+  $('caixas').querySelectorAll('.caixa').forEach((cx, i) => {
+    cx.textContent = f.numero[i] || '';
+    cx.classList.toggle('atual', f.numero.length === i);
+  });
+
+  $('foto-grande').outerHTML = `<span id="foto-grande">${avatarModal(f.fotoPrevia, f.nome || f.email, f.numero, 'foto-grande')}</span>`;
+  $('rotulo-seletor').textContent = f.fotoPrevia ? 'Trocar foto' : 'Escolher foto';
+  $('btn-remover-foto').hidden = !f.fotoPrevia;
+
+  document.querySelectorAll('[data-papel-novo]').forEach((b) => {
+    b.setAttribute('aria-pressed', String(b.dataset.papelNovo === f.role));
+    b.disabled = !!f.trava && f.modo === 'editar';
+  });
+  $('descricao-papel').textContent = f.trava && f.modo === 'editar'
+    ? f.trava
+    : f.role === 'admin'
+      ? 'Admin vota e também gerencia participantes, categorias e a edição.'
+      : 'Votante só entra, vota na urna e pronto.';
+
+  $('previa').innerHTML = `
+    ${avatarModal(f.fotoPrevia, f.nome || f.email, f.numero, 'avatar-previa')}
+    <span class="nome-txt"><b>${esc(f.nome.trim() || 'Nome do participante')}</b><span>${esc(f.apelido.trim() || 'Apelido')}</span></span>
+    <span class="num">${esc(f.numero ? f.numero.padEnd(2, '–') : '–')}</span>`;
+  $('ajuda-previa').textContent = f.numero ? '' : 'Sem número: não aparece na lista da urna.';
+}
+
+function escolherFoto(input) {
+  const arquivo = input.files && input.files[0];
+  input.value = '';
+  const f = estado.form;
+  if (!arquivo || !f) return;
+  if (!arquivo.type.startsWith('image/')) return setErroFoto('Esse arquivo não é uma imagem.');
+  if (arquivo.size > FOTO_MAX_MB * 1024 * 1024) return setErroFoto(`A foto passa de ${FOTO_MAX_MB} MB.`);
+  setErroFoto('');
+  if (f.fotoArquivo) URL.revokeObjectURL(f.fotoPrevia);
+  f.fotoArquivo = arquivo;
+  f.fotoPrevia = URL.createObjectURL(arquivo);
+  renderForm();
+}
+
+function validar(f) {
+  let ok = true;
+  if (!f.ativo) {
+    if (!EMAIL_RE.test(f.email)) { setErroEmail('Coloque um e-mail válido.'); ok = false; }
+    else if (estado.contas.some((c) => c.email === f.email && c.id !== f.id)) { setErroEmail('Esse e-mail já está na lista.'); ok = false; }
+  }
+  if (!aberta() && f.numero) {
+    if (!/^\d{2}$/.test(f.numero)) { setErroNumero('Use 2 dígitos (00 a 99) ou deixe em branco.'); ok = false; }
+    else {
+      const dono = estado.contas.find((c) => c.numero === f.numero && c.id !== f.id);
+      if (dono) { setErroNumero(`O ${f.numero} já é de ${nomeDe(dono)}.`); ok = false; }
+    }
+  }
+  if (!f.nome.trim()) { setErroNome('Coloque o nome.'); ok = false; }
+  return ok;
+}
+
+async function salvar() {
+  const f = estado.form;
+  if (!f || estado.ocupado || !validar(f)) return;
+  estado.ocupado = true;
+  $('btn-salvar').disabled = true;
+  let enviada = null;
+  try {
+    const id = f.modo === 'novo' ? crypto.randomUUID() : f.id;
+    let foto_url = f.foto_url || null;
+    if (f.fotoArquivo) { enviada = await api.enviarFoto(f.fotoArquivo, id); foto_url = enviada.url; }
+    else if (!f.fotoPrevia) foto_url = null;
+
+    const base = { nome: f.nome.trim(), apelido: f.apelido.trim() || null, foto_url };
+    if (!aberta()) base.numero = f.numero || null;
+
+    let salvo;
+    if (f.modo === 'novo') {
+      salvo = await api.criar({ ...base, id, email: f.email, role: f.role });
+      estado.contas.push(salvo);
+      avisar(`${nomeDe(salvo)} foi cadastrado${salvo.numero ? ' e já é candidato' : ''}.`);
+    } else {
+      const reg = { ...base };
+      if (f.role !== f.roleOriginal && !f.dev) reg.role = f.role;
+      if (!f.ativo) reg.email = f.email;
+      salvo = await api.atualizar(f.id, reg);
+      estado.contas = estado.contas.map((c) => c.id === f.id ? salvo : c);
+      avisar('Alterações salvas.');
+    }
+    // foto antiga some do Storage quando foi trocada ou removida
+    if (f.foto_url && f.foto_url !== salvo.foto_url) api.apagarFoto(f.foto_url);
+    f.fotoArquivo = null;   // não revogar a URL que agora está em uso
+    fecharModais();
+    render();
+  } catch (e) {
+    console.error(e);
+    if (enviada) api.apagarFoto(enviada.url);
+    avisar(GGC.msgErro(e, 'Não deu para salvar. Tente de novo.'), { erro: true });
+  } finally {
+    estado.ocupado = false;
+    $('btn-salvar').disabled = false;
+  }
+}
+
+/* ---------------- remover ---------------- */
+function pedirRemocao(id) {
+  const c = estado.contas.find((x) => x.id === id);
+  if (!c || travaRemocao(c)) return;
+  estado.removendo = c;
+  $('titulo-remover').textContent = ativo(c) ? 'Remover acesso?' : 'Remover convite?';
+  $('texto-remover').innerHTML = `<strong>${esc(nomeDe(c))}</strong> (${esc(c.email)}) ` + (ativo(c)
+    ? 'perde o acesso e sai da lista da urna. Os votos já dados continuam valendo.'
+    : 'sai da lista e não vai conseguir criar conta.');
+  abrirModal('modal-remover');
+  $('btn-confirmar-remocao').focus();
+}
+
+async function confirmarRemocao() {
+  const alvo = estado.removendo;
+  if (!alvo || estado.ocupado) return;
+  estado.ocupado = true;
+  try {
+    await api.remover(alvo.id);
+    if (alvo.foto_url) api.apagarFoto(alvo.foto_url);
+    estado.contas = estado.contas.filter((c) => c.id !== alvo.id);
+    ultimoFoco = $('btn-adicionar');
+    fecharModais();
+    render();
+    avisar(`${nomeDe(alvo)} foi removido.`);
+  } catch (e) {
+    console.error(e);
+    avisar(GGC.msgErro(e, 'Não deu para remover. Tente de novo.'), { erro: true });
+  } finally {
+    estado.ocupado = false;
+  }
+}
+
+/* ---------------- eventos ---------------- */
+$('btn-adicionar').addEventListener('click', () => abrirForm(null));
+$('busca').addEventListener('input', (e) => { estado.busca = e.target.value; render(); });
+$('form').addEventListener('submit', (e) => { e.preventDefault(); salvar(); });
+$('btn-confirmar-remocao').addEventListener('click', confirmarRemocao);
+$('btn-desfazer').addEventListener('click', () => { const fn = acaoDesfazer; esconderAviso(); if (fn) fn(); });
+
+$('campo-email').addEventListener('input', (e) => { estado.form.email = e.target.value.trim().toLowerCase(); setErroEmail(''); });
+$('campo-numero').addEventListener('input', (e) => {
+  const v = e.target.value.replace(/\D/g, '').slice(0, 2);
+  e.target.value = v;
+  estado.form.numero = v;
+  setErroNumero('');
+  renderForm();
+});
+$('campo-nome').addEventListener('input', (e) => { estado.form.nome = e.target.value; setErroNome(''); renderForm(); });
+$('campo-apelido').addEventListener('input', (e) => { estado.form.apelido = e.target.value; renderForm(); });
+$('campo-foto').addEventListener('change', (e) => escolherFoto(e.target));
+$('btn-remover-foto').addEventListener('click', () => {
+  const f = estado.form;
+  if (f.fotoArquivo) URL.revokeObjectURL(f.fotoPrevia);
+  f.fotoArquivo = null;
+  f.fotoPrevia = '';
+  renderForm();
+});
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (b && !b.disabled) {
+    if (b.dataset.filtro) { estado.filtro = b.dataset.filtro; render(); return; }
+    if (b.dataset.papel) { trocarPapel(b.dataset.id, b.dataset.papel); return; }
+    if (b.dataset.editar) { abrirForm(estado.contas.find((c) => c.id === b.dataset.editar)); return; }
+    if (b.dataset.remover) { pedirRemocao(b.dataset.remover); return; }
+    if (b.dataset.papelNovo) { estado.form.role = b.dataset.papelNovo; renderForm(); return; }
+    if (b.hasAttribute('data-fechar')) { fecharModais(); return; }
+  }
+  if (e.target.classList && e.target.classList.contains('fundo-modal')) fecharModais();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && (!$('modal-form').hidden || !$('modal-remover').hidden)) fecharModais();
+});
+
+/* ---------------- início ---------------- */
+(async function iniciar() {
+  const { conta } = await GGC.exigirSessao({ roles: ['admin', 'dev'] });
+  estado.euId = conta.id;
+  try {
+    const [status, contas] = await Promise.all([api.status(), api.listar()]);
+    estado.status = status;
+    estado.contas = contas;
+  } catch (e) {
+    console.error(e);
+    avisar('Não deu para carregar os participantes.', { erro: true });
+  }
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GGC Awards</title>
+<link rel="icon" type="image/jpeg" href="assets/logo_ggc.jpg">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+</head>
+<body>
+<noscript><a href="login.html">Entrar no GGC Awards</a></noscript>
+<script>
+(async function () {
+  try {
+    const s = await GGC.sessaoAtual();
+    location.replace(s && s.conta ? GGC.destinoPorRole(s.conta.role) : GGC.LOGIN);
+  } catch (e) {
+    console.error(e);
+    location.replace(GGC.LOGIN);
+  }
+})();
+</script>
+</body>
+</html>

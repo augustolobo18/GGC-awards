@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apuração — GGC Awards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&family=Lilita+One&display=swap" rel="stylesheet">
+<link rel="icon" type="image/jpeg" href="assets/logo_ggc.jpg">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<style>
+  :root{
+    --bg:#E7E9E4; --ink:#15180F; --muted:#4F554B; --muted2:#3E423A; --card:#fff; --line:#E3E6DF; --line2:#EEF0EB;
+    --borda:#C9CEC3; --campo:#FAFBF8; --foco:#1F5FBF; --verde:#35A55A; --cinza-barra:#9AA094;
+    --marinho:#0B2A4A; --amarelo:#FFC21A; --ciano:#5EC8F0; --texto-claro:#CFE6F7;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif}
+  button,input{font-family:inherit}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  .pagina{min-height:100vh;padding:32px 24px 64px}
+  .wrap{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+
+  /* cabeçalho */
+  .topo{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 24px}
+  .topo .sobre{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  h1{margin:4px 0 0;font-family:'Space Grotesk',Inter,sans-serif;font-size:36px;line-height:1.1}
+  .status-topo{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+  .ao-vivo{display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--muted2)}
+  .ao-vivo::before{content:"";width:9px;height:9px;border-radius:50%;background:#2E8A4C;animation:pulsa 1.6s ease-in-out infinite}
+  @keyframes pulsa{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
+  .btn{min-height:44px;padding:0 16px;border:1.5px solid var(--borda);border-radius:10px;background:#fff;color:var(--ink);font-size:14px;font-weight:600;
+    display:inline-flex;align-items:center;gap:8px;cursor:pointer;transition:background .15s}
+  .btn:hover{background:#F2F5F0}
+  .btn:focus-visible,.seg:focus-visible{outline:3px solid var(--foco);outline-offset:2px}
+  .girando svg{animation:gira .8s linear infinite}
+  a.sobre.voltar{display:inline-block;text-decoration:none}
+  a.sobre.voltar:hover{color:var(--ink)}
+  .ao-vivo.final::before{animation:none;background:var(--cinza-barra)}
+  .ano-box{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--muted2)}
+  .ano-box[hidden]{display:none}
+  .sel-ano{min-height:44px;padding:0 12px;border:1.5px solid var(--borda);border-radius:10px;background:#fff;color:var(--ink);font:600 14px Inter,sans-serif;cursor:pointer}
+  .sel-ano:focus-visible{outline:3px solid var(--foco);outline-offset:2px}
+  @keyframes gira{to{transform:rotate(360deg)}}
+
+  /* comparecimento */
+  .comparecimento{background:#fff;border-radius:16px;box-shadow:0 6px 20px rgba(30,35,25,.08);padding:16px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px}
+  .comparecimento .rotulo{font-size:13px;font-weight:600;color:var(--muted)}
+  .comparecimento .valor{font-family:'Space Grotesk',Inter,sans-serif;font-size:28px;font-weight:700}
+  .comparecimento .valor small{font-size:16px;font-weight:500;color:var(--muted)}
+  .progresso-box{flex:1 1 260px;display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+  .trilho{height:12px;border-radius:999px;background:var(--line2);overflow:hidden}
+  .trilho.fino{height:8px}
+  .trilho.escuro{height:10px;background:rgba(255,255,255,.12)}
+  .preenchido{height:100%;border-radius:999px;background:var(--ink);transform-origin:left center;animation:cresce .7s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes cresce{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+  /* GGC Of The Year */
+  .principal{position:relative;overflow:hidden;border-radius:28px;background:var(--marinho);color:#fff;padding:40px 40px 32px;box-shadow:0 24px 50px rgba(11,42,74,.30)}
+  .principal::before,.principal::after{content:"";position:absolute;border-radius:50%;pointer-events:none}
+  .principal::before{width:520px;height:520px;left:-140px;top:-220px;background:radial-gradient(circle,rgba(46,196,240,.45) 0,rgba(46,196,240,0) 65%)}
+  .principal::after{width:460px;height:460px;right:-120px;bottom:-220px;background:radial-gradient(circle,rgba(255,194,26,.30) 0,rgba(255,194,26,0) 65%)}
+  .principal>*{position:relative}
+  .principal-topo{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:28px}
+  .principal-titulo{display:flex;align-items:center;gap:14px}
+  .principal h2{margin:0;font-family:'Lilita One',Inter,sans-serif;font-weight:400;font-size:52px;line-height:1;color:var(--amarelo);letter-spacing:.01em;
+    -webkit-text-stroke:3px var(--marinho);paint-order:stroke fill;text-shadow:0 4px 0 var(--marinho)}
+  .pilula-clara{padding:6px 14px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);font-size:14px;font-weight:600}
+  .principal-corpo{display:flex;flex-wrap:wrap;gap:32px 48px;align-items:stretch}
+  .lider{flex:1 1 360px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:8px 0}
+  .selo{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:var(--amarelo);color:var(--marinho);font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+  .lider-foto{position:relative}
+  .lider-foto .foto{width:168px;height:168px;border-radius:50%;border:6px solid var(--amarelo);box-shadow:0 0 0 6px rgba(255,194,26,.25);display:flex;align-items:center;justify-content:center;
+    font-family:'Space Grotesk',Inter,sans-serif;font-size:56px;font-weight:700;color:#fff;object-fit:cover}
+  .lider-foto .numero{position:absolute;right:-4px;bottom:6px;min-width:56px;height:44px;padding:0 10px;border-radius:10px;background:#fff;color:var(--marinho);border:3px solid var(--marinho);
+    display:inline-flex;align-items:center;justify-content:center;font:700 22px Arial,sans-serif}
+  .lider-nome{display:flex;flex-direction:column;gap:4px}
+  .lider-nome b{font-family:'Space Grotesk',Inter,sans-serif;font-size:34px;line-height:1.1}
+  .lider-nome span{font-size:17px;color:var(--texto-claro)}
+  .lider-pct{display:flex;align-items:baseline;gap:10px}
+  .lider-pct b{font-family:'Space Grotesk',Inter,sans-serif;font-size:64px;line-height:1;color:var(--amarelo)}
+  .lider-pct span{font-size:15px;color:var(--texto-claro);text-align:left}
+  .ranking-principal{flex:1 1 380px;min-width:0;display:flex;flex-direction:column;gap:16px;justify-content:center}
+  .rotulo-claro{font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--texto-claro)}
+  ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column}
+  .ranking-principal ol{gap:14px}
+  .ranking-principal li{display:flex;flex-direction:column;gap:6px}
+  .rk-linha{display:flex;align-items:center;gap:12px}
+  .rk-pos{width:22px;font-size:15px;font-weight:700;color:var(--texto-claro);text-align:right}
+  .rk-foto{width:36px;height:36px;border-radius:50%;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;
+    border:2px solid rgba(255,255,255,.5);object-fit:cover}
+  .rk-nome{flex:1;min-width:0;font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rk-nome span{font-weight:500;color:var(--texto-claro)}
+  .rk-pct{font-size:15px;font-weight:700}
+  .rk-votos{width:64px;font-size:13px;color:var(--texto-claro);text-align:right}
+  .ranking-principal .trilho{margin-left:34px}
+  .principal-rodape{display:flex;flex-wrap:wrap;gap:8px 24px;margin-top:28px;padding-top:18px;border-top:1px solid rgba(255,255,255,.18);font-size:14px;color:var(--texto-claro)}
+  .principal-rodape strong{color:#fff}
+  .sem-votos-principal{margin:0;padding:40px 0;text-align:center;font-size:18px;color:var(--texto-claro)}
+
+  /* categorias */
+  .cat-titulo{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:8px}
+  .cat-titulo h2{margin:0;font-family:'Space Grotesk',Inter,sans-serif;font-size:24px}
+  .cat-titulo span{font-size:14px;color:var(--muted)}
+  .barra-filtro{position:sticky;top:0;z-index:5;margin:-8px -8px 0;padding:8px;background:var(--bg)}
+  .barra-filtro-card{background:#fff;border-radius:16px;box-shadow:0 6px 20px rgba(30,35,25,.08);padding:12px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px}
+  .busca-box{flex:1 1 300px;max-width:460px;position:relative;display:flex}
+  .busca-box svg{position:absolute;left:14px;top:13px}
+  .campo{width:100%;height:44px;padding:0 14px 0 40px;border:1.5px solid var(--borda);border-radius:10px;font-size:15px;color:var(--ink);background:var(--campo)}
+  .campo:focus{outline:none;border-color:var(--foco);box-shadow:0 0 0 3px rgba(31,95,191,.18)}
+  .filtro{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px;font-weight:600;color:var(--muted2)}
+  .segmentos{display:inline-flex;flex-wrap:wrap;padding:4px;border-radius:12px;background:var(--line2);gap:4px}
+  .seg{min-height:36px;padding:0 12px;border:0;border-radius:9px;font-size:14px;font-weight:600;background:transparent;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .seg .qtd{font-size:12px;font-weight:700;color:var(--muted)}
+  .seg[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(21,24,15,.15)}
+  .mostrando{margin-left:auto;font-size:13px;color:var(--muted)}
+
+  .grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:20px}
+  .cat{scroll-margin-top:90px;background:#fff;border-radius:18px;box-shadow:0 10px 30px rgba(30,35,25,.08);padding:20px;display:flex;flex-direction:column;gap:16px}
+  .cat-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .cat h3{margin:0;font-family:'Space Grotesk',Inter,sans-serif;font-size:18px;line-height:1.25}
+  .cat-total{flex:0 0 auto;font-size:13px;color:var(--muted)}
+  .cat-lider{display:flex;align-items:center;gap:14px;padding:12px;border-radius:14px;background:#E6F4EA;border:1.5px solid #BFE3CB}
+  .cat-lider.empate{background:#FFF4D6;border-color:#E8C766}
+  .cat-lider .foto{width:52px;height:52px;border-radius:50%;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;object-fit:cover}
+  .cat-lider-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+  .cat-lider-txt small{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1E6B3A}
+  .cat-lider.empate small{color:#8A5A00}
+  .cat-lider-txt b{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cat-lider-pct{display:flex;flex-direction:column;align-items:flex-end}
+  .cat-lider-pct b{font-family:'Space Grotesk',Inter,sans-serif;font-size:28px;line-height:1}
+  .cat-lider-pct span{font-size:12px;color:var(--muted)}
+  .cat ol{gap:10px}
+  .cat li{display:flex;flex-direction:column;gap:5px}
+  .cr-linha{display:flex;align-items:center;gap:8px;font-size:14px}
+  .cr-num{flex:0 0 auto;min-width:30px;height:22px;border-radius:6px;background:var(--ink);color:#fff;display:inline-flex;align-items:center;justify-content:center;font:700 13px Arial,sans-serif}
+  .cr-nome{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cr-pct{font-weight:700}
+  .cr-votos{width:58px;color:var(--muted);text-align:right;font-size:13px}
+  .cat-vazia{margin:0;padding:24px 0;text-align:center;font-size:14px;color:var(--muted)}
+  .cat-rodape{margin-top:auto;padding-top:12px;border-top:1px solid var(--line2);display:flex;gap:16px;font-size:13px;color:var(--muted)}
+  .cat-rodape strong{color:var(--ink)}
+  .nada{background:#fff;border-radius:18px;padding:48px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;color:var(--muted);font-size:14px}
+  .nada b{font-size:16px;color:var(--ink)}
+  .nada[hidden]{display:none}
+
+  @media (max-width:560px){
+    .pagina{padding:24px 16px 48px}
+    h1{font-size:30px}
+    .principal{padding:28px 20px 24px;border-radius:22px}
+    .principal h2{font-size:38px}
+    .lider-foto .foto{width:136px;height:136px;font-size:44px}
+    .lider-pct b{font-size:52px}
+    .grade{grid-template-columns:1fr}
+    .mostrando{margin-left:0}
+    .lider,.ranking-principal{flex-basis:100%}
+    .rk-votos{display:none}
+    .ranking-principal .trilho{margin-left:0}
+    .rk-nome{font-size:15px}
+  }
+  @media (prefers-reduced-motion: reduce){ .preenchido,.ao-vivo::before{animation:none} }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <div class="wrap">
+    <header class="topo">
+      <div>
+        <a class="sobre voltar" href="admin-menu.html">← GGC Awards · Admin</a>
+        <h1>Apuração</h1>
+      </div>
+      <div class="status-topo">
+        <label class="ano-box" id="bloco-ano" hidden>Ano
+          <select class="sel-ano" id="ano" aria-label="Ano da apuração"></select>
+        </label>
+        <span class="ao-vivo" id="atualizado">Carregando…</span>
+        <button class="btn" type="button" id="btn-atualizar">
+          <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+          Atualizar
+        </button>
+      </div>
+    </header>
+
+    <section class="comparecimento" aria-label="Comparecimento">
+      <div>
+        <div class="rotulo" id="rotulo-votaram">Eleitores que já votaram</div>
+        <div class="valor" id="votaram">–</div>
+      </div>
+      <div class="progresso-box">
+        <div class="trilho" role="progressbar" aria-label="Comparecimento" aria-valuemin="0" aria-valuemax="100" id="comp-barra">
+          <div class="preenchido" id="comp-preenchido" style="width:0%"></div>
+        </div>
+        <span id="comp-texto"></span>
+      </div>
+    </section>
+
+    <section class="principal" aria-labelledby="titulo-principal" id="principal"></section>
+
+    <div class="cat-titulo">
+      <h2>Categorias</h2>
+      <span>% sobre os votos válidos</span>
+    </div>
+
+    <div class="barra-filtro" role="search" aria-label="Filtrar categorias">
+      <div class="barra-filtro-card">
+        <label class="busca-box">
+          <span class="sr">Buscar categoria ou candidato</span>
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4F554B" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <input class="campo" id="busca" type="search" placeholder="Buscar categoria ou candidato" autocomplete="off">
+        </label>
+        <div class="filtro">
+          <span id="rotulo-filtro">Mostrar</span>
+          <div class="segmentos" id="filtros" role="group" aria-labelledby="rotulo-filtro"></div>
+        </div>
+        <span class="mostrando" id="mostrando" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="grade" id="grade"></div>
+
+    <div class="nada" id="nada" hidden>
+      <b>Nenhuma categoria encontrada</b>
+      Tente outro nome ou outro filtro.
+      <button class="btn" type="button" id="btn-limpar">Limpar busca e filtro</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   APURAÇÃO (só admin e dev)
+
+   Ano atual  -> ao vivo: view "apuracao" (categoria_id, conta_id, tipo, votos) + categorias + contas
+                 + rpc qtd_que_votaram(). Recarrega por Realtime (comparecimento/eleicao) e a cada 15 s.
+   Anos antigos -> resultado congelado: tabelas "apuracoes" + "edicoes" (nome, apelido, número, foto e
+                 título da categoria foram copiados no encerramento, então não mudam se o cadastro mudar).
+   A categoria principal (GGC Of The Year) é a que tem principal = true.
+   ===================================================================== */
+
+const SEM_NOME = { id: 'removido', numero: '', nome: 'Participante removido', apelido: '', foto_url: null };
+
+const api = {
+  async aoVivo() {
+    const [el, cats, cands, apur, eleitores, votaram, edicoes] = await Promise.all([
+      sb.from('eleicao').select('ano, status').eq('id', 1).single(),
+      sb.from('categorias').select('id, titulo, principal, ordem').order('ordem'),
+      sb.from('contas').select('id, nome, apelido, numero, foto_url'),
+      sb.from('apuracao').select('categoria_id, conta_id, tipo, votos'),
+      sb.from('contas').select('id', { count: 'exact', head: true }).not('user_id', 'is', null),
+      sb.rpc('qtd_que_votaram'),
+      sb.from('edicoes').select('ano').order('ano', { ascending: false }),
+    ]);
+    for (const r of [el, cats, cands, apur, eleitores, votaram, edicoes]) if (r.error) throw r.error;
+    const porId = new Map(cands.data.map((c) => [c.id, c]));
+    return {
+      ano: el.data.ano,
+      status: el.data.status,
+      anos: edicoes.data.map((e) => e.ano),
+      aoVivo: true,
+      categorias: cats.data,
+      apuracao: apur.data.filter((a) => a.categoria_id).map((a) => ({
+        categoria_id: a.categoria_id, tipo: a.tipo, votos: a.votos,
+        candidato: a.tipo === 'nominal' ? (porId.get(a.conta_id) || SEM_NOME) : null,
+      })),
+      eleitores: eleitores.count || 0,
+      votaram: votaram.data || 0,
+    };
+  },
+
+  async congelado(ano) {
+    const [ed, ap] = await Promise.all([
+      sb.from('edicoes').select('ano, eleitores, votaram, encerrada_em').eq('ano', ano).single(),
+      sb.from('apuracoes').select('categoria_ordem, categoria_titulo, principal, tipo, numero, nome, apelido, foto_url, votos').eq('ano', ano),
+    ]);
+    if (ed.error) throw ed.error;
+    if (ap.error) throw ap.error;
+    const cats = new Map();
+    const chave = (a) => `${a.categoria_ordem}|${a.categoria_titulo}`;
+    for (const a of ap.data) {
+      if (!cats.has(chave(a))) cats.set(chave(a), { id: chave(a), titulo: a.categoria_titulo, principal: a.principal, ordem: a.categoria_ordem });
+    }
+    return {
+      ano,
+      status: 'encerrada',
+      aoVivo: false,
+      encerradaEm: ed.data.encerrada_em,
+      categorias: [...cats.values()].sort((a, b) => a.ordem - b.ordem),
+      apuracao: ap.data.map((a) => ({
+        categoria_id: chave(a), tipo: a.tipo, votos: a.votos,
+        candidato: a.tipo === 'nominal'
+          ? { id: `${a.numero}|${a.nome}`, numero: a.numero || '', nome: a.nome || SEM_NOME.nome, apelido: a.apelido || '', foto_url: a.foto_url }
+          : null,
+      })),
+      eleitores: ed.data.eleitores,
+      votaram: ed.data.votaram,
+    };
+  },
+};
+
+/* ===================================================================== */
+
+const ATUALIZAR_A_CADA_S = 15;
+const CORES_AVATAR = ['#2F5D8A','#7A3E8E','#A0442C','#2E7D5B','#8A6A1F','#3B4A9C','#9C2F5A','#256C78','#5E6B21','#6B3FA0'];
+const FILTROS = [['todas', 'Todas'], ['empate', 'Empates'], ['definida', 'Com líder'], ['sem', 'Sem votos']];
+const REGRAS = {
+  todas: () => true,
+  empate: (c) => c.empate,
+  definida: (c) => c.temVotos && !c.empate,
+  sem: (c) => !c.temVotos,
+};
+
+const estado = { dados: null, anos: [], anoAtual: null, anoSel: 'atual', busca: '', filtro: 'todas', carregando: false, pendente: false };
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const votosTexto = (n) => `${n} ${n === 1 ? 'voto' : 'votos'}`;
+const cor = (numero) => CORES_AVATAR[(parseInt(numero, 10) || 0) % CORES_AVATAR.length];
+const iniciais = (nome) => {
+  const p = String(nome || '').trim().split(/\s+/).filter(Boolean);
+  return ((p[0] || '?')[0] + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase();
+};
+const foto = (c, classe) => c.foto_url
+  ? `<img class="${classe}" src="${esc(c.foto_url)}" alt="">`
+  : `<span class="${classe}" aria-hidden="true" style="background:${cor(c.numero)}">${esc(iniciais(c.nome))}</span>`;
+
+/* ---------------- cálculo ---------------- */
+function apurar(cat, d) {
+  const linhas = d.apuracao.filter((a) => a.categoria_id === cat.id);
+  const soma = (tipo) => linhas.filter((a) => a.tipo === tipo).reduce((t, a) => t + a.votos, 0);
+  const validos = soma('nominal');
+  const brancos = soma('branco');
+  const nulos = soma('nulo');
+
+  const ranking = linhas
+    .filter((a) => a.tipo === 'nominal')
+    .sort((a, b) => b.votos - a.votos || a.candidato.nome.localeCompare(b.candidato.nome, 'pt-BR'))
+    .map((a, i) => ({ ...a.candidato, posicao: i + 1, votos: a.votos, pct: validos ? Math.round((a.votos / validos) * 100) : 0 }));
+
+  const empatados = ranking.filter((r) => r.votos === ranking[0]?.votos);
+  return {
+    ...cat,
+    validos, brancos, nulos,
+    total: validos + brancos + nulos,
+    ranking,
+    temVotos: ranking.length > 0,
+    empate: empatados.length > 1,
+    empatados,
+    textoBusca: (cat.titulo + ' ' + ranking.map((r) => `${r.nome} ${r.apelido || ''} ${r.numero}`).join(' ')).toLowerCase(),
+  };
+}
+
+/* ---------------- render ---------------- */
+function renderComparecimento(d) {
+  const pct = d.eleitores ? Math.round((d.votaram / d.eleitores) * 100) : 0;
+  const faltam = d.eleitores - d.votaram;
+  $('rotulo-votaram').textContent = d.aoVivo ? 'Eleitores que já votaram' : 'Eleitores que votaram';
+  $('votaram').innerHTML = `${d.votaram} <small>de ${d.eleitores}</small>`;
+  $('comp-preenchido').style.width = pct + '%';
+  $('comp-barra').setAttribute('aria-valuenow', pct);
+  $('comp-texto').textContent = `${pct}% de comparecimento · ` +
+    (faltam > 0 ? (faltam === 1 ? 'falta 1 pessoa' : `faltam ${faltam} pessoas`) : 'todo mundo votou');
+}
+
+function renderPrincipal(p) {
+  const trofeu = `<svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FFC21A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/></svg>`;
+  const topo = `
+    <div class="principal-topo">
+      <div class="principal-titulo">${trofeu}<h2 id="titulo-principal">${esc(p.titulo)}</h2></div>
+      <span class="pilula-clara">${votosTexto(p.total)}</span>
+    </div>`;
+  const rodape = `
+    <div class="principal-rodape">
+      <span>Votos válidos: <strong>${p.validos}</strong></span>
+      <span>Brancos: <strong>${p.brancos}</strong></span>
+      <span>Nulos: <strong>${p.nulos}</strong></span>
+    </div>`;
+
+  if (!p.temVotos) {
+    $('principal').innerHTML = topo + `<p class="sem-votos-principal">Ainda não tem votos para o ${esc(p.titulo)}.</p>` + rodape;
+    return;
+  }
+
+  const l = p.ranking[0];
+  const lideres = p.ranking[0].votos;
+  const ranking = p.ranking.slice(0, 6).map((r) => `
+    <li>
+      <div class="rk-linha">
+        <span class="rk-pos">${r.posicao}º</span>
+        ${foto(r, 'rk-foto')}
+        <span class="rk-nome">${esc(r.nome)} ${r.numero ? `<span>· ${esc(r.numero)}</span>` : ''}</span>
+        <span class="rk-pct">${r.pct}%</span>
+        <span class="rk-votos">${votosTexto(r.votos)}</span>
+      </div>
+      <div class="trilho escuro"><div class="preenchido" style="width:${r.pct}%;background:${r.votos === lideres ? 'var(--amarelo)' : 'var(--ciano)'}"></div></div>
+    </li>`).join('');
+
+  $('principal').innerHTML = topo + `
+    <div class="principal-corpo">
+      <div class="lider">
+        <span class="selo">${p.empate ? 'Empate na liderança' : estado.dados.aoVivo ? 'Liderando' : 'Vencedor'}</span>
+        <div class="lider-foto">
+          ${foto(l, 'foto')}
+          ${l.numero ? `<span class="numero">${esc(l.numero)}</span>` : ''}
+        </div>
+        <div class="lider-nome">
+          <b>${esc(p.empate ? p.empatados.map((r) => r.apelido || r.nome).join(' e ') : l.nome)}</b>
+          ${!p.empate && l.apelido ? `<span>“${esc(l.apelido)}”</span>` : ''}
+        </div>
+        <div class="lider-pct">
+          <b>${l.pct}%</b>
+          <span>dos votos válidos<br>${votosTexto(l.votos)}</span>
+        </div>
+      </div>
+      <div class="ranking-principal">
+        <span class="rotulo-claro">Ranking</span>
+        <ol>${ranking}</ol>
+      </div>
+    </div>` + rodape;
+}
+
+function cardCategoria(c) {
+  let corpo = `<p class="cat-vazia">Ainda sem votos.</p>`;
+  if (c.temVotos) {
+    const l = c.ranking[0];
+    const lideres = l.votos;
+    const nomeLider = c.empate ? c.empatados.map((r) => r.apelido || r.nome).join(' e ') : l.nome;
+    corpo = `
+      <div class="cat-lider ${c.empate ? 'empate' : ''}">
+        ${foto(l, 'foto')}
+        <span class="cat-lider-txt"><small>${c.empate ? 'Empate' : estado.dados.aoVivo ? 'Liderando' : 'Vencedor'}</small><b>${esc(nomeLider)}</b></span>
+        <span class="cat-lider-pct"><b>${l.pct}%</b><span>${votosTexto(l.votos)}</span></span>
+      </div>
+      <ol>${c.ranking.slice(0, 3).map((r) => `
+        <li>
+          <div class="cr-linha">
+            ${r.numero ? `<span class="cr-num">${esc(r.numero)}</span>` : ''}
+            <span class="cr-nome">${esc(r.nome)}</span>
+            <span class="cr-pct">${r.pct}%</span>
+            <span class="cr-votos">${votosTexto(r.votos)}</span>
+          </div>
+          <div class="trilho fino"><div class="preenchido" style="width:${r.pct}%;background:${r.votos === lideres ? 'var(--verde)' : 'var(--cinza-barra)'}"></div></div>
+        </li>`).join('')}
+      </ol>`;
+  }
+  return `
+    <article class="cat" aria-label="${esc(c.titulo)}">
+      <div class="cat-topo"><h3>${esc(c.titulo)}</h3><span class="cat-total">${votosTexto(c.total)}</span></div>
+      ${corpo}
+      <div class="cat-rodape"><span>Brancos: <strong>${c.brancos}</strong></span><span>Nulos: <strong>${c.nulos}</strong></span></div>
+    </article>`;
+}
+
+function renderCategorias() {
+  const d = estado.dados;
+  const todas = d.categorias.filter((c) => !c.principal).map((c) => apurar(c, d));
+  const termo = estado.busca.trim().toLowerCase();
+  const visiveis = todas.filter(REGRAS[estado.filtro]).filter((c) => !termo || c.textoBusca.includes(termo));
+
+  $('filtros').innerHTML = FILTROS.map(([id, rotulo]) =>
+    `<button class="seg" type="button" data-filtro="${id}" aria-pressed="${estado.filtro === id}">${rotulo} <span class="qtd">${todas.filter(REGRAS[id]).length}</span></button>`
+  ).join('');
+  $('mostrando').textContent = visiveis.length === todas.length ? `${todas.length} categorias` : `Mostrando ${visiveis.length} de ${todas.length}`;
+  $('grade').innerHTML = visiveis.map(cardCategoria).join('');
+  $('nada').hidden = visiveis.length > 0;
+}
+
+function renderAnos() {
+  const opcoes = [`<option value="atual">${estado.anoAtual} (atual, ao vivo)</option>`]
+    .concat(estado.anos.filter((a) => a !== estado.anoAtual).map((a) => `<option value="${a}">${a} (encerrada)</option>`));
+  $('ano').innerHTML = opcoes.join('');
+  $('ano').value = estado.anoSel;
+  $('bloco-ano').hidden = estado.anos.filter((a) => a !== estado.anoAtual).length === 0;
+}
+
+function render() {
+  const d = estado.dados;
+  if (!d) return;
+  renderComparecimento(d);
+  const catPrincipal = d.categorias.find((c) => c.principal) || { id: -1, titulo: 'GGC Of The Year' };
+  renderPrincipal(apurar(catPrincipal, d));
+  renderCategorias();
+}
+
+/* ---------------- carregar ---------------- */
+function legenda(d) {
+  $('atualizado').classList.toggle('final', !d.aoVivo);
+  if (d.aoVivo) {
+    const rotulo = d.status === 'aberta' ? 'Ao vivo' : d.status === 'encerrada' ? 'Votação encerrada' : 'Votação fechada';
+    $('atualizado').textContent = `${rotulo} · atualizado às ${new Date().toLocaleTimeString('pt-BR')}`;
+  } else {
+    $('atualizado').textContent = `Resultado final de ${d.ano} · encerrada em ${new Date(d.encerradaEm).toLocaleDateString('pt-BR')}`;
+  }
+}
+
+async function recarregar() {
+  if (estado.carregando) { estado.pendente = true; return; }
+  estado.carregando = true;
+  $('btn-atualizar').classList.add('girando');
+  $('atualizado').textContent = 'Atualizando…';
+  try {
+    // o ano atual sempre vem ao vivo (mantém a lista de anos e o ano corrente em dia)
+    const vivo = await api.aoVivo();
+    estado.anoAtual = vivo.ano;
+    estado.anos = vivo.anos;
+    if (estado.anoSel !== 'atual' && !vivo.anos.includes(Number(estado.anoSel))) estado.anoSel = 'atual';
+    estado.dados = estado.anoSel === 'atual' ? vivo : await api.congelado(Number(estado.anoSel));
+    renderAnos();
+    render();
+    legenda(estado.dados);
+  } catch (e) {
+    console.error(e);
+    $('atualizado').textContent = 'Não deu para atualizar. Tentando de novo em breve.';
+  } finally {
+    estado.carregando = false;
+    $('btn-atualizar').classList.remove('girando');
+    if (estado.pendente) { estado.pendente = false; recarregar(); }
+  }
+}
+
+const aoVivoAgora = () => estado.anoSel === 'atual';
+
+/* ---------------- eventos ---------------- */
+$('btn-atualizar').addEventListener('click', recarregar);
+$('ano').addEventListener('change', (e) => { estado.anoSel = e.target.value; recarregar(); });
+$('busca').addEventListener('input', (e) => { estado.busca = e.target.value; if (estado.dados) renderCategorias(); });
+$('filtros').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-filtro]');
+  if (!b) return;
+  estado.filtro = b.dataset.filtro;
+  renderCategorias();
+});
+$('btn-limpar').addEventListener('click', () => {
+  estado.busca = '';
+  estado.filtro = 'todas';
+  $('busca').value = '';
+  renderCategorias();
+  $('busca').focus();
+});
+
+/* ---------------- início ---------------- */
+(async function iniciar() {
+  await GGC.exigirSessao({ roles: ['admin', 'dev'] });
+  await recarregar();
+
+  // voto novo (comparecimento) ou mudança de status/ano: recarrega na hora
+  let espera;
+  const logo = () => { clearTimeout(espera); espera = setTimeout(() => { if (aoVivoAgora()) recarregar(); }, 400); };
+  sb.channel('apuracao-vivo')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'comparecimento' }, logo)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'eleicao' }, () => { clearTimeout(espera); espera = setTimeout(recarregar, 400); })
+    .subscribe();
+
+  setInterval(() => { if (!document.hidden && aoVivoAgora()) recarregar(); }, ATUALIZAR_A_CADA_S * 1000);
+})();
+</script>
+</body>
+</html>
