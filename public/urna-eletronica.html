@@ -305,6 +305,32 @@ function motivoInvalido(n) {
 }
 
 /* ---------------- som ---------------- */
+// Som de FIM da urna (arquivo real). O celular só deixa tocar áudio depois de um toque do usuário,
+// e o FIM toca depois da resposta do servidor; por isso "destravamos" o áudio no primeiro toque/tecla.
+const SOM_FIM = new Audio('assets/sons/fim.mp3');
+SOM_FIM.preload = 'auto';
+let somFimLiberado = false;
+let tocandoFim = false;
+function liberarSomFim() {
+  if (somFimLiberado) return;
+  somFimLiberado = true;
+  SOM_FIM.muted = true;
+  SOM_FIM.play().then(() => {
+    if (tocandoFim) return;   // o FIM de verdade já começou: não interrompe
+    SOM_FIM.pause(); SOM_FIM.currentTime = 0; SOM_FIM.muted = false;
+  }).catch(() => { SOM_FIM.muted = false; somFimLiberado = false; });
+}
+['pointerdown', 'keydown'].forEach((ev) => document.addEventListener(ev, liberarSomFim, { capture: true }));
+
+function tocarFim() {
+  if (!SOM_LIGADO) return;
+  tocandoFim = true;
+  SOM_FIM.muted = false;
+  SOM_FIM.currentTime = 0;
+  // se o navegador recusar o arquivo, cai no bip sintetizado
+  SOM_FIM.play().catch(() => bip([[1050, .09], [1050, .09], [1050, .09], [1050, .09], [1050, .55]]));
+}
+
 let audioCtx;
 function bip(seq) {
   if (!SOM_LIGADO) return;
@@ -384,7 +410,7 @@ async function enviar() {
   try {
     await enviarVotos(estado.votos.slice());
     estado.envio = 'ok';
-    bip([[1050, .09], [1050, .09], [1050, .09], [1050, .09], [1050, .55]]);
+    tocarFim();
   } catch (err) {
     console.error(err);
     const m = String(err.message || '');
