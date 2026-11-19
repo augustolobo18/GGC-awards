@@ -155,6 +155,19 @@
     .lista{height:auto;max-height:340px}
     .cand{min-height:56px}
   }
+  /* votação fora do ar (não abriu / encerrada / já votou) */
+  .bloqueio{background:var(--card);border-radius:22px;box-shadow:0 10px 30px rgba(30,35,25,.10);padding:56px 24px;
+    display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;max-width:560px;width:100%;margin:24px auto 0}
+  .bloqueio .icone{width:72px;height:72px;border-radius:50%;background:var(--urna);display:flex;align-items:center;justify-content:center}
+  .bloqueio h2{margin:0;font-family:'Space Grotesk',Inter,sans-serif;font-size:28px;line-height:1.15}
+  .bloqueio p{margin:0;max-width:420px;font-size:15px;line-height:1.5;color:var(--muted)}
+  .bloqueio .acoes-bloqueio{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:8px}
+  .bloqueio .btn-b{min-height:48px;padding:0 22px;border-radius:12px;font:700 15px Inter,sans-serif;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+  .bloqueio .btn-b.forte{background:var(--tecla);color:#fff;border:0}
+  .bloqueio .btn-b.leve{background:transparent;color:var(--muted);border:1.5px solid #B9BEB4}
+  .bloqueio .btn-b:focus-visible{outline:3px solid #1F5FBF;outline-offset:2px}
+  .bloqueio[hidden],.colunas[hidden],.topo p[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -165,8 +178,15 @@
         <span class="sobre" id="sobre">Eleições da Galera</span>
         <h1>Hora de votar</h1>
       </div>
-      <p>Digite os dois números do candidato no teclado da urna (ou toque no nome na lista) e aperte CONFIRMA. Dá pra usar o teclado do computador também.</p>
+      <p id="instrucao">Digite os dois números do candidato no teclado da urna (ou toque no nome na lista) e aperte CONFIRMA. Dá pra usar o teclado do computador também.</p>
     </header>
+
+    <section class="bloqueio" id="bloqueio" hidden aria-live="polite">
+      <span class="icone" id="bloqueio-icone" aria-hidden="true"></span>
+      <h2 id="bloqueio-titulo"></h2>
+      <p id="bloqueio-texto"></p>
+      <div class="acoes-bloqueio" id="bloqueio-acoes"></div>
+    </section>
 
     <div class="colunas">
       <section class="urna-col" aria-label="Urna eletrônica">
@@ -376,6 +396,39 @@ function voltarAoInicio() {
   location.href = GGC.destinoPorRole(SESSAO.conta.role);
 }
 
+/* Tela de urna fora do ar: mesma para todos; admin/dev ganham "Voltar ao menu". */
+const ICONE_CADEADO = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#15180F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`;
+const ICONE_CHECK = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#2E8A4C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
+const BLOQUEIOS = {
+  fechada:   { icone: ICONE_CADEADO, titulo: 'A votação ainda não abriu', texto: 'A urna libera assim que a votação for aberta. Esta tela atualiza sozinha.' },
+  encerrada: { icone: ICONE_CADEADO, titulo: 'A votação foi encerrada',   texto: 'A urna está fechada. Agora é esperar o resultado.' },
+  votou:     { icone: ICONE_CHECK,   titulo: 'Você já votou',             texto: 'Seu voto está registrado. Cada pessoa vota uma vez por ano.' },
+};
+
+function mostrarBloqueio(tipo) {
+  const b = BLOQUEIOS[tipo];
+  const admin = ['admin', 'dev'].includes(SESSAO.conta.role);
+  $('bloqueio-icone').innerHTML = b.icone;
+  $('bloqueio-titulo').textContent = b.titulo;
+  $('bloqueio-texto').textContent = b.texto;
+  $('bloqueio-acoes').innerHTML =
+    (admin ? `<a class="btn-b forte" href="admin-menu.html">Voltar ao menu</a>` : '') +
+    `<button type="button" class="btn-b leve" id="bloqueio-sair">Sair</button>`;
+  $('bloqueio-sair').addEventListener('click', () => GGC.sair());
+  $('instrucao').hidden = true;
+  document.querySelector('.colunas').hidden = true;
+  $('bloqueio').hidden = false;
+}
+
+// enquanto estiver bloqueada por "não abriu", libera sozinha quando o admin abrir
+function esperarAbertura() {
+  sb.channel('urna-status')
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'eleicao' }, (p) => {
+      if (p.new && p.new.status === 'aberta') location.reload();
+    })
+    .subscribe();
+}
+
 /* ---------------- render ---------------- */
 function avatarHTML(c, classe) {
   return c.foto_url
@@ -552,8 +605,10 @@ $('busca').addEventListener('input', (e) => {
     const d = await carregarDados();
     $('sobre').textContent = `Eleições da Galera ${d.eleicao.ano}`;
     document.title = `Urna da Galera ${d.eleicao.ano}`;
-    // votação fechada/encerrada ou voto já registrado: não há o que fazer aqui
-    if (d.eleicao.status !== 'aberta' || d.jaVotou) { voltarAoInicio(); return; }
+    // votação fechada/encerrada ou voto já registrado: mostra a tela de urna fora do ar
+    if (d.eleicao.status === 'fechada') { mostrarBloqueio('fechada'); esperarAbertura(); return; }
+    if (d.eleicao.status !== 'aberta')  { mostrarBloqueio('encerrada'); return; }
+    if (d.jaVotou)                      { mostrarBloqueio('votou'); return; }
     estado.candidatos = d.candidatos;
     estado.categorias = d.categorias;
     if (!d.categorias.length) estado.falhaCarga = 'Ainda não há categorias cadastradas.';

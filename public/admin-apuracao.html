@@ -148,6 +148,13 @@
   .nada b{font-size:16px;color:var(--ink)}
   .nada[hidden]{display:none}
 
+  /* votação ainda não aberta */
+  .nao-abriu{background:var(--marinho);color:#fff;border-radius:22px;padding:56px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+  .nao-abriu h2{margin:0;font-family:'Space Grotesk',Inter,sans-serif;font-size:28px;color:var(--amarelo)}
+  .nao-abriu p{margin:0;max-width:440px;font-size:15px;line-height:1.5;color:var(--texto-claro)}
+  .nao-abriu[hidden],#resultado[hidden],.btn[hidden]{display:none}
+  #resultado{display:flex;flex-direction:column;gap:24px}
+
   @media (max-width:560px){
     .pagina{padding:24px 16px 48px}
     h1{font-size:30px}
@@ -185,6 +192,13 @@
       </div>
     </header>
 
+    <section class="nao-abriu" id="nao-abriu" hidden>
+      <svg aria-hidden="true" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#FFC21A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      <h2>A votação ainda não abriu</h2>
+      <p id="nao-abriu-texto">Quando a votação for aberta no menu admin, a apuração aparece aqui ao vivo.</p>
+    </section>
+
+    <div id="resultado" hidden>
     <section class="comparecimento" aria-label="Comparecimento">
       <div>
         <div class="rotulo" id="rotulo-votaram">Eleitores que já votaram</div>
@@ -227,6 +241,7 @@
       Tente outro nome ou outro filtro.
       <button class="btn" type="button" id="btn-limpar">Limpar busca e filtro</button>
     </div>
+    </div>
   </div>
 </div>
 
@@ -244,23 +259,30 @@
 const SEM_NOME = { id: 'removido', numero: '', nome: 'Participante removido', apelido: '', foto_url: null };
 
 const api = {
-  async aoVivo() {
-    const [el, cats, cands, apur, eleitores, votaram, edicoes] = await Promise.all([
+  // ano e status atuais + anos já encerrados (decide o que a tela mostra)
+  async situacao() {
+    const [el, edicoes] = await Promise.all([
       sb.from('eleicao').select('ano, status').eq('id', 1).single(),
+      sb.from('edicoes').select('ano').order('ano', { ascending: false }),
+    ]);
+    for (const r of [el, edicoes]) if (r.error) throw r.error;
+    return { ano: el.data.ano, status: el.data.status, anos: edicoes.data.map((e) => e.ano) };
+  },
+
+  async aoVivo(sit) {
+    const [cats, cands, apur, eleitores, votaram] = await Promise.all([
       sb.from('categorias').select('id, titulo, principal, ordem').order('ordem'),
       sb.from('contas').select('id, nome, apelido, numero, foto_url'),
       sb.from('apuracao').select('categoria_id, conta_id, tipo, votos'),
       sb.from('contas').select('id', { count: 'exact', head: true }).not('user_id', 'is', null),
       sb.rpc('qtd_que_votaram'),
-      sb.from('edicoes').select('ano').order('ano', { ascending: false }),
     ]);
-    for (const r of [el, cats, cands, apur, eleitores, votaram, edicoes]) if (r.error) throw r.error;
+    for (const r of [cats, cands, apur, eleitores, votaram]) if (r.error) throw r.error;
     const porId = new Map(cands.data.map((c) => [c.id, c]));
     return {
-      ano: el.data.ano,
-      status: el.data.status,
-      anos: edicoes.data.map((e) => e.ano),
-      aoVivo: true,
+      ano: sit.ano,
+      status: sit.status,
+      aoVivo: sit.status === 'aberta',
       categorias: cats.data,
       apuracao: apur.data.filter((a) => a.categoria_id).map((a) => ({
         categoria_id: a.categoria_id, tipo: a.tipo, votos: a.votos,
@@ -313,7 +335,7 @@ const REGRAS = {
   sem: (c) => !c.temVotos,
 };
 
-const estado = { dados: null, anos: [], anoAtual: null, anoSel: 'atual', busca: '', filtro: 'todas', carregando: false, pendente: false };
+const estado = { dados: null, anos: [], anoAtual: null, statusAtual: null, anoSel: 'atual', busca: '', filtro: 'todas', carregando: false, pendente: false };
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
@@ -361,8 +383,10 @@ function renderComparecimento(d) {
   $('votaram').innerHTML = `${d.votaram} <small>de ${d.eleitores}</small>`;
   $('comp-preenchido').style.width = pct + '%';
   $('comp-barra').setAttribute('aria-valuenow', pct);
-  $('comp-texto').textContent = `${pct}% de comparecimento · ` +
-    (faltam > 0 ? (faltam === 1 ? 'falta 1 pessoa' : `faltam ${faltam} pessoas`) : 'todo mundo votou');
+  const resto = d.aoVivo
+    ? (faltam > 0 ? (faltam === 1 ? 'falta 1 pessoa' : `faltam ${faltam} pessoas`) : 'todo mundo votou')
+    : (faltam > 0 ? (faltam === 1 ? '1 pessoa não votou' : `${faltam} pessoas não votaram`) : 'todo mundo votou');
+  $('comp-texto').textContent = `${pct}% de comparecimento · ${resto}`;
 }
 
 function renderPrincipal(p) {
@@ -469,7 +493,8 @@ function renderCategorias() {
 }
 
 function renderAnos() {
-  const opcoes = [`<option value="atual">${estado.anoAtual} (atual, ao vivo)</option>`]
+  const situ = { aberta: 'atual, ao vivo', encerrada: 'atual, encerrada', fechada: 'atual, não abriu' }[estado.statusAtual] || 'atual';
+  const opcoes = [`<option value="atual">${estado.anoAtual} (${situ})</option>`]
     .concat(estado.anos.filter((a) => a !== estado.anoAtual).map((a) => `<option value="${a}">${a} (encerrada)</option>`));
   $('ano').innerHTML = opcoes.join('');
   $('ano').value = estado.anoSel;
@@ -479,6 +504,16 @@ function renderAnos() {
 function render() {
   const d = estado.dados;
   if (!d) return;
+  // atualizar (botão e automático) só existe com a votação aberta
+  $('btn-atualizar').hidden = !aoVivoAgora();
+  $('nao-abriu').hidden = !d.naoAbriu;
+  $('resultado').hidden = !!d.naoAbriu;
+  if (d.naoAbriu) {
+    $('nao-abriu-texto').textContent = estado.anos.some((a) => a !== d.ano)
+      ? `Quando a votação de ${d.ano} for aberta no menu admin, a apuração aparece aqui ao vivo. Os anos anteriores estão no seletor de ano.`
+      : `Quando a votação de ${d.ano} for aberta no menu admin, a apuração aparece aqui ao vivo.`;
+    return;
+  }
   renderComparecimento(d);
   const catPrincipal = d.categorias.find((c) => c.principal) || { id: -1, titulo: 'GGC Of The Year' };
   renderPrincipal(apurar(catPrincipal, d));
@@ -488,11 +523,14 @@ function render() {
 /* ---------------- carregar ---------------- */
 function legenda(d) {
   $('atualizado').classList.toggle('final', !d.aoVivo);
-  if (d.aoVivo) {
-    const rotulo = d.status === 'aberta' ? 'Ao vivo' : d.status === 'encerrada' ? 'Votação encerrada' : 'Votação fechada';
-    $('atualizado').textContent = `${rotulo} · atualizado às ${new Date().toLocaleTimeString('pt-BR')}`;
+  if (d.naoAbriu) {
+    $('atualizado').textContent = `${d.ano} · votação ainda não abriu`;
+  } else if (d.aoVivo) {
+    $('atualizado').textContent = `Ao vivo · atualizado às ${new Date().toLocaleTimeString('pt-BR')}`;
+  } else if (d.encerradaEm) {
+    $('atualizado').textContent = `Votação encerrada · resultado final de ${d.ano} · ${new Date(d.encerradaEm).toLocaleDateString('pt-BR')}`;
   } else {
-    $('atualizado').textContent = `Resultado final de ${d.ano} · encerrada em ${new Date(d.encerradaEm).toLocaleDateString('pt-BR')}`;
+    $('atualizado').textContent = `Votação encerrada · resultado final de ${d.ano}`;
   }
 }
 
@@ -502,12 +540,21 @@ async function recarregar() {
   $('btn-atualizar').classList.add('girando');
   $('atualizado').textContent = 'Atualizando…';
   try {
-    // o ano atual sempre vem ao vivo (mantém a lista de anos e o ano corrente em dia)
-    const vivo = await api.aoVivo();
-    estado.anoAtual = vivo.ano;
-    estado.anos = vivo.anos;
-    if (estado.anoSel !== 'atual' && !vivo.anos.includes(Number(estado.anoSel))) estado.anoSel = 'atual';
-    estado.dados = estado.anoSel === 'atual' ? vivo : await api.congelado(Number(estado.anoSel));
+    const sit = await api.situacao();
+    estado.anoAtual = sit.ano;
+    estado.statusAtual = sit.status;
+    estado.anos = sit.anos;
+    if (estado.anoSel !== 'atual' && !sit.anos.includes(Number(estado.anoSel))) estado.anoSel = 'atual';
+
+    if (estado.anoSel !== 'atual') {
+      estado.dados = await api.congelado(Number(estado.anoSel));
+    } else if (sit.status === 'fechada') {
+      estado.dados = { ano: sit.ano, status: sit.status, naoAbriu: true, aoVivo: false };
+    } else if (sit.status === 'encerrada' && sit.anos.includes(sit.ano)) {
+      estado.dados = await api.congelado(sit.ano);   // resultado final congelado no encerramento
+    } else {
+      estado.dados = await api.aoVivo(sit);          // aberta (ao vivo)
+    }
     renderAnos();
     render();
     legenda(estado.dados);
@@ -521,10 +568,11 @@ async function recarregar() {
   }
 }
 
-const aoVivoAgora = () => estado.anoSel === 'atual';
+// só a votação aberta do ano atual se atualiza (sozinha ou pelo botão)
+const aoVivoAgora = () => estado.anoSel === 'atual' && estado.statusAtual === 'aberta';
 
 /* ---------------- eventos ---------------- */
-$('btn-atualizar').addEventListener('click', recarregar);
+$('btn-atualizar').addEventListener('click', () => { if (aoVivoAgora()) recarregar(); });
 $('ano').addEventListener('change', (e) => { estado.anoSel = e.target.value; recarregar(); });
 $('busca').addEventListener('input', (e) => { estado.busca = e.target.value; if (estado.dados) renderCategorias(); });
 $('filtros').addEventListener('click', (e) => {
@@ -546,7 +594,8 @@ $('btn-limpar').addEventListener('click', () => {
   await GGC.exigirSessao({ roles: ['admin', 'dev'] });
   await recarregar();
 
-  // voto novo (comparecimento) ou mudança de status/ano: recarrega na hora
+  // voto novo (comparecimento): recarrega só com a votação aberta.
+  // mudança de status/ano (abrir, encerrar, novo ano): troca a tela na hora, em qualquer estado.
   let espera;
   const logo = () => { clearTimeout(espera); espera = setTimeout(() => { if (aoVivoAgora()) recarregar(); }, 400); };
   sb.channel('apuracao-vivo')
