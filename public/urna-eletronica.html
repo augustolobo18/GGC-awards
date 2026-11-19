@@ -351,7 +351,21 @@ function bip(seq) {
     }
   } catch (e) {}
 }
-const somTecla = () => bip([[1200, 0.05]]);
+// Sons reais da urna para tecla e CONFIRMA. Tocam dentro do próprio toque/tecla (o celular deixa).
+// Cada toque usa uma cópia do áudio, então digitar rápido não corta o som anterior.
+// Se o navegador recusar o arquivo, cai no bip sintetizado.
+const SOM_TECLA = new Audio('assets/sons/tecla.mp3');
+const SOM_CONFIRMA = new Audio('assets/sons/confirma.mp3');
+SOM_TECLA.preload = 'auto';
+SOM_CONFIRMA.preload = 'auto';
+function tocarArquivo(base, reserva) {
+  if (!SOM_LIGADO) return;
+  try {
+    base.cloneNode().play().catch(reserva);
+  } catch (e) { reserva(); }
+}
+const somTecla = () => tocarArquivo(SOM_TECLA, () => bip([[1200, 0.05]]));
+const somConfirma = () => tocarArquivo(SOM_CONFIRMA, () => bip([[1050, .09], [1050, .09], [1050, .2]]));
 
 /* ---------------- ações da urna ---------------- */
 const travada = () => estado.carregando || estado.fim || !!estado.falhaCarga;
@@ -372,7 +386,7 @@ function escolher(numero) {
 
 function apertarCorrige() {
   if (travada()) return;
-  bip([[900, 0.05]]);
+  somTecla();   // na urna real o CORRIGE faz o mesmo bip das teclas
   estado.digitos = '';
   render();
 }
@@ -396,7 +410,7 @@ function apertarConfirma() {
     render();
     enviar();
   } else {
-    bip([[1050, .09], [1050, .09], [1050, .2]]);
+    somConfirma();
     estado.etapa += 1;
     render();
   }
