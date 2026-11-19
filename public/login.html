@@ -110,7 +110,7 @@
   <section class="vidro" aria-labelledby="titulo">
     <div class="cabeca">
       <h1 id="titulo">GGC<br>Awards</h1>
-      <p id="texto-intro">Mostra seu título de eleitor da galera e bora votar.</p>
+      <p id="texto-intro">A premiação anual do GGC. Entre para votar e ver os resultados.</p>
     </div>
 
     <form id="form" novalidate>
@@ -142,10 +142,10 @@
         <span id="erro-texto"></span>
       </p>
 
-      <button class="btn-entrar" id="entrar" type="submit">Entrar para votar</button>
+      <button class="btn-entrar" id="entrar" type="submit">Entrar</button>
     </form>
 
-    <p class="rodape">Só quem está na lista da galera consegue entrar.</p>
+    <p class="rodape">Acesso só para membros do GGC cadastrados pelo admin.</p>
   </section>
 </main>
 
@@ -156,7 +156,7 @@
 const $ = (id) => document.getElementById(id);
 const emailValido = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 const SENHA_MIN = 6;
-const MSG_FORA = 'Esse e-mail não está na lista. Peça para a galera te cadastrar.';
+const MSG_FORA = 'Esse e-mail não está cadastrado. Peça para o admin te adicionar.';
 let modo = 'entrar';   // 'entrar' | 'criar'
 
 function mostrarErro(msg, ok = false) {
@@ -165,7 +165,7 @@ function mostrarErro(msg, ok = false) {
   $('erro').hidden = !msg;
 }
 
-function rotuloBotao() { return modo === 'entrar' ? 'Entrar para votar' : 'Criar conta'; }
+function rotuloBotao() { return modo === 'entrar' ? 'Entrar' : 'Criar conta'; }
 
 function setCarregando(sim) {
   const b = $('entrar');
@@ -183,8 +183,8 @@ function aplicarModo() {
   $('esqueci').hidden = criar;
   $('entrar').textContent = rotuloBotao();
   $('texto-intro').textContent = criar
-    ? 'Use o e-mail que a galera cadastrou para você e escolha uma senha.'
-    : 'Mostra seu título de eleitor da galera e bora votar.';
+    ? 'Use o e-mail cadastrado pelo admin e escolha uma senha.'
+    : 'A premiação anual do GGC. Entre para votar e ver os resultados.';
   mostrarErro('');
 }
 
@@ -207,7 +207,7 @@ $('alternar').addEventListener('click', (e) => {
 $('esqueci').addEventListener('click', async (e) => {
   e.preventDefault();
   const email = $('email').value.trim().toLowerCase();
-  if (!emailValido(email)) { mostrarErro('Coloca seu e-mail acima para a gente mandar o link.'); $('email').focus(); return; }
+  if (!emailValido(email)) { mostrarErro('Digite seu e-mail acima para receber o link.'); $('email').focus(); return; }
   mostrarErro('');
   try {
     const redirectTo = new URL('nova-senha.html', location.href).href;
@@ -236,7 +236,7 @@ function traduzir(err) {
   const m = String(err.message || '');
   if (/não está na lista/i.test(m)) return MSG_FORA;
   if (/already|registered|exists/i.test(m)) return 'Esse e-mail já tem conta. Entre com a senha.';
-  if (/invalid login|credentials/i.test(m)) return 'E-mail ou senha não batem.';
+  if (/invalid login|credentials/i.test(m)) return 'E-mail ou senha incorretos.';
   if (/password/i.test(m) && /(least|short|weak|characters)/i.test(m)) return `A senha precisa ter pelo menos ${SENHA_MIN} caracteres.`;
   if (/rate|many/i.test(m)) return 'Muitas tentativas. Espere um pouco e tente de novo.';
   if (/network|fetch/i.test(m)) return 'Sem conexão. Tente de novo.';
@@ -247,7 +247,7 @@ $('form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = $('email').value.trim().toLowerCase();
   const senha = $('senha').value;
-  if (!emailValido(email)) { mostrarErro('Coloca um e-mail válido.'); $('email').focus(); return; }
+  if (!emailValido(email)) { mostrarErro('Digite um e-mail válido.'); $('email').focus(); return; }
   if (!senha) { mostrarErro('Faltou a senha.'); $('senha').focus(); return; }
   if (modo === 'criar') {
     if (senha.length < SENHA_MIN) { mostrarErro(`A senha precisa ter pelo menos ${SENHA_MIN} caracteres.`); $('senha').focus(); return; }

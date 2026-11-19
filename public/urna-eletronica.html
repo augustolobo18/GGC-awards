@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Urna da Galera</title>
+<title>Urna — GGC Awards</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
 <link rel="icon" type="image/jpeg" href="assets/logo_ggc.jpg">
@@ -175,7 +175,7 @@
   <div class="wrap">
     <header class="topo">
       <div>
-        <span class="sobre" id="sobre">Eleições da Galera</span>
+        <span class="sobre" id="sobre">GGC Awards</span>
         <h1>Hora de votar</h1>
       </div>
       <p id="instrucao">Digite os dois números do candidato no teclado da urna (ou toque no nome na lista) e aperte CONFIRMA. Dá pra usar o teclado do computador também.</p>
@@ -195,7 +195,7 @@
             <div class="tela" id="tela" aria-live="polite"></div>
           </div>
           <div class="teclado-col">
-            <div class="marca"><span>URNA DA GALERA</span><span class="led" id="led" aria-hidden="true"></span></div>
+            <div class="marca"><span>URNA GGC</span><span class="led" id="led" aria-hidden="true"></span></div>
             <div class="painel">
               <div class="numeros" id="numeros"></div>
               <div class="acoes">
@@ -607,8 +607,8 @@ $('busca').addEventListener('input', (e) => {
   render();
   try {
     const d = await carregarDados();
-    $('sobre').textContent = `Eleições da Galera ${d.eleicao.ano}`;
-    document.title = `Urna da Galera ${d.eleicao.ano}`;
+    $('sobre').textContent = `GGC Awards ${d.eleicao.ano}`;
+    document.title = `Urna — GGC Awards ${d.eleicao.ano}`;
     // votação fechada/encerrada ou voto já registrado: mostra a tela de urna fora do ar
     if (d.eleicao.status === 'fechada') { mostrarBloqueio('fechada'); esperarAbertura(); return; }
     if (d.eleicao.status !== 'aberta')  { mostrarBloqueio('encerrada'); return; }
