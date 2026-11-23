@@ -1,4 +1,4 @@
--- GGC Awards — 99: checks (rode DEPOIS de 01-06; nada persiste)
+-- GGC Awards — 99: checks (rode DEPOIS de 01-09; nada persiste)
 -- Cada bloco falha com ASSERT se algo estiver errado.
 
 -- ------------------------------------------------------------ 1. estaticos
@@ -7,12 +7,12 @@ declare
   v_n int;
   v_cols text[];
 begin
-  -- RLS ligado nas 7 tabelas
+  -- RLS ligado nas 8 tabelas
   select count(*) into v_n
     from pg_class c join pg_namespace n on n.oid = c.relnamespace
    where n.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity
-     and c.relname in ('contas','categorias','eleicao','comparecimento','votos','edicoes','apuracoes');
-  assert v_n = 7, format('RLS ligado em %s de 7 tabelas', v_n);
+     and c.relname in ('contas','categorias','eleicao','comparecimento','votos','edicoes','apuracoes','vencedores_ggc');
+  assert v_n = 8, format('RLS ligado em %s de 8 tabelas', v_n);
 
   -- votos: sem eleitor e sem timestamp
   select array_agg(column_name::text order by column_name) into v_cols
@@ -39,6 +39,9 @@ begin
   assert not has_function_privilege('authenticated', 'public.hook_so_convidados(jsonb)', 'execute'), 'authenticated executa o hook';
   assert not has_function_privilege('anon', 'public.hook_so_convidados(jsonb)', 'execute'), 'anon executa o hook';
   assert has_table_privilege('supabase_auth_admin', 'public.contas', 'select'), 'supabase_auth_admin sem select em contas';
+  assert not has_function_privilege('authenticated', 'public.vencedores_em_carencia()', 'execute'), 'authenticated executa vencedores_em_carencia';
+  assert not has_table_privilege('authenticated', 'public.vencedores_ggc', 'insert'), 'authenticated insere em vencedores_ggc';
+  assert not has_table_privilege('anon', 'public.vencedores_ggc', 'select'), 'anon le vencedores_ggc';
 
   -- storage e realtime
   assert exists (select 1 from storage.buckets where id = 'fotos' and public and file_size_limit = 5242880),
@@ -218,6 +221,80 @@ begin
 
   reset role;
   raise notice 'checks de comportamento OK (nada persistiu)';
+end $$;
+
+-- ------------------------------------------------ 3. elegibilidade do GGC Of The Year (rollback)
+-- Quem vence só volta a concorrer 4 anos depois. Usa o ano fictício 2090 para não esbarrar
+-- nos vencedores reais; tudo é desfeito no fim.
+do $$
+declare
+  v_a    uuid := gen_random_uuid();
+  v_id_b uuid;
+  v_id_c uuid;
+  v_ok   boolean;
+  v_r    record;
+begin
+  begin
+    assert not exists (select 1 from public.contas where numero in ('91','92','93')),
+      'numeros 91-93 ja usados; o teste precisa deles livres';
+
+    update public.eleicao set ano = 2090, status = 'aberta' where id = 1;
+    insert into public.contas (email, nome, apelido, numero, role) values
+      ('teste-a@ggc.invalid', 'Teste A', 'A', '91', 'votante'),
+      ('teste-b@ggc.invalid', 'Teste B', 'B', '92', 'votante'),
+      ('teste-c@ggc.invalid', 'Teste C', 'C', '93', 'votante');
+    select id into v_id_b from public.contas where email = 'teste-b@ggc.invalid';
+    select id into v_id_c from public.contas where email = 'teste-c@ggc.invalid';
+
+    -- B venceu no ano anterior, C há 4 anos
+    insert into public.vencedores_ggc (ano, conta_id, nome) values (2089, v_id_b, 'Teste B'), (2086, v_id_c, 'Teste C');
+    assert v_id_b in (select public.bloqueados_principal()), 'vencedor do ano anterior deveria estar fora';
+    assert v_id_c not in (select public.bloqueados_principal()), 'vencedor de 4 anos atras deveria concorrer';
+    update public.vencedores_ggc set ano = 2087 where conta_id = v_id_b;
+    assert v_id_b in (select public.bloqueados_principal()), 'vencedor de 3 anos atras deveria estar fora';
+
+    -- ano com vencedor registrado nao pode ser reusado (A como admin)
+    insert into auth.users (id, email) values (v_a, 'teste-a@ggc.invalid');
+    update public.contas set role = 'admin' where email = 'teste-a@ggc.invalid';
+    update public.eleicao set status = 'fechada' where id = 1;
+    perform set_config('request.jwt.claims', json_build_object('sub', v_a, 'role', 'authenticated')::text, true);
+    perform set_config('request.jwt.claim.sub', v_a::text, true);
+    set local role authenticated;
+    v_ok := false;
+    begin perform public.definir_ano(2087); exception when others then v_ok := true; end;
+    assert v_ok, 'definir_ano aceitou ano que ja tem vencedor';
+
+    -- A volta a votante e a votacao abre (como postgres, sem claims)
+    reset role;
+    perform set_config('request.jwt.claims', '', true);
+    perform set_config('request.jwt.claim.sub', '', true);
+    update public.contas set role = 'votante' where email = 'teste-a@ggc.invalid';
+    update public.eleicao set status = 'aberta' where id = 1;
+
+    -- votante A: urna marca B como fora (com o ano), C concorre; votar recusa B no GGC
+    perform set_config('request.jwt.claims', json_build_object('sub', v_a, 'role', 'authenticated')::text, true);
+    perform set_config('request.jwt.claim.sub', v_a::text, true);
+    set local role authenticated;
+    select * into v_r from public.candidatos_urna() where numero = '92';
+    assert v_r.bloqueado_principal and v_r.venceu_em = 2087, 'urna deveria marcar B como fora (venceu em 2087)';
+    select * into v_r from public.candidatos_urna() where numero = '93';
+    assert not v_r.bloqueado_principal and v_r.venceu_em is null, 'urna deveria liberar C';
+    v_ok := false;
+    begin perform public.votar((select jsonb_agg(jsonb_build_object('categoria_id', id, 'numero', '92')) from public.categorias)); exception when others then v_ok := true; end;
+    assert v_ok, 'votar aceitou vencedor recente no GGC Of The Year';
+    perform public.votar((select jsonb_agg(jsonb_build_object('categoria_id', id, 'numero', '93')) from public.categorias));
+    assert public.ja_votei(), 'voto em C deveria valer';
+
+    raise exception '__ggc_rollback__';
+  exception
+    when raise_exception then
+      if sqlerrm <> '__ggc_rollback__' then
+        raise;
+      end if;
+  end;
+
+  reset role;
+  raise notice 'checks de elegibilidade OK (nada persistiu)';
 end $$;
 
 -- confirma que nada vazou

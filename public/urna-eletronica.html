@@ -225,11 +225,13 @@
 /* =====================================================================
    URNA — dados reais do Supabase.
 
-   candidatos_urna(): participantes com número, EXCETO o próprio eleitor (id, numero, nome, apelido, foto_url).
+   candidatos_urna(): participantes com número, EXCETO o próprio eleitor
+                      (id, numero, nome, apelido, foto_url, bloqueado_principal, venceu_em).
    categorias:        id | ordem | titulo | descricao | principal (a principal vota por último)
    votar(p_votos):    [{ categoria_id, numero }], tudo de uma vez no FIM.
                       Não existe branco nem nulo: só dá para confirmar número de candidato válido
-                      (existe, não é o próprio e, no GGC Of The Year, não é o admin do ano).
+                      (existe, não é o próprio e, no GGC Of The Year, não é o admin do ano nem
+                      quem venceu nos 3 anos anteriores).
                       O banco recusa o envio inteiro se algum número for inválido.
    ===================================================================== */
 
@@ -286,8 +288,9 @@ const iniciais = (nome) => {
   const p = String(nome || '').trim().split(/\s+/);
   return (((p[0] || '')[0] || '') + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase();
 };
-// No GGC Of The Year (principal) o admin do ano não concorre: some da lista e o número dele é recusado
-// (o banco aplica a mesma regra em votar()). Nas outras categorias todo mundo concorre.
+// No GGC Of The Year (principal) não concorrem o admin do ano e quem venceu nos 3 anos anteriores
+// (vencedor só volta 4 anos depois): somem da lista e o número é recusado (o banco aplica a mesma
+// regra em votar()). Nas outras categorias todo mundo concorre.
 const candidatosDaEtapa = () => {
   const cat = estado.categorias[estado.etapa];
   return cat && cat.principal ? estado.candidatos.filter((c) => !c.bloqueado_principal) : estado.candidatos;
@@ -298,8 +301,11 @@ const acharCandidato = (n) => candidatosDaEtapa().find((c) => c.numero === n);
 function motivoInvalido(n) {
   if (SESSAO && SESSAO.conta.numero === n) return 'Você não pode votar em si mesmo.';
   const cat = estado.categorias[estado.etapa];
-  if (cat && cat.principal && estado.candidatos.some((c) => c.numero === n && c.bloqueado_principal)) {
-    return 'O admin do ano não concorre no GGC Of The Year.';
+  const bloq = cat && cat.principal && estado.candidatos.find((c) => c.numero === n && c.bloqueado_principal);
+  if (bloq) {
+    return bloq.venceu_em
+      ? `Venceu o GGC Of The Year em ${bloq.venceu_em}; volta a concorrer em ${bloq.venceu_em + 4}.`
+      : 'O admin do ano não concorre no GGC Of The Year.';
   }
   return 'Esse número não está na disputa.';
 }

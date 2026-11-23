@@ -18,11 +18,8 @@ Site de votação anual da galera GGC: urna estilo brasileira (voto único e sec
 
 O projeto Supabase é `cftzrevmsucsvkgnqpct`. Rode os arquivos de `supabase/` nesta ordem (SQL Editor, `supabase db push` ou via MCP com `apply_migration`):
 
-1. `01_schema.sql`
-2. `02_functions.sql`
-3. `03_rls.sql`
-4. `04_seed.sql`
-5. `99_checks.sql` (verificações; roda com rollback)
+1. `01_schema.sql` a `09_elegibilidade_ggc.sql`, na ordem dos números
+2. `99_checks.sql` (verificações; roda com rollback)
 
 Todos são idempotentes. O `04_seed.sql` cria a conta `dev` com o e-mail placeholder `SEU_EMAIL_AQUI`. Troque pelo seu e-mail real **só no banco** (nunca em arquivo versionado):
 
@@ -61,7 +58,7 @@ Abra `http://localhost:3000`. O `index.html` redireciona conforme a sessão: sem
    - Antes de abrir, escreva o recado do ano em **Boas-vindas**: o votante lê depois de "Começar a votar" e antes da urna (sem texto, a tela é pulada).
 4. Cada votante vota uma vez na urna (tudo gravado de uma vez no FIM). A **Apuração** atualiza ao vivo.
 5. Admin encerra: o resultado vira snapshot em `edicoes` + `apuracoes` e fica visível **só para admins** (cerimônia).
-6. Admin **publica os resultados**: o ano fica visível para todos na tela de resultados e o bastão de admin passa para o vencedor do GGC Of The Year (o admin anterior volta a votante). O admin do ano não pode ser votado no GGC Of The Year. Empate: o dev escolhe o vencedor no card Edição antes de publicar.
+6. Admin **publica os resultados**: o ano fica visível para todos na tela de resultados e o bastão de admin passa para o vencedor do GGC Of The Year (o admin anterior volta a votante). No GGC Of The Year não podem ser votados o admin do ano e quem venceu nos 3 anos anteriores: o vencedor só volta a concorrer 4 anos depois (venceu em 2026, concorre de novo em 2030). Os vencedores ficam em `vencedores_ggc`, inclusive os anos anteriores ao site. Empate: o dev escolhe o vencedor no card Edição antes de publicar.
 7. O **novo admin** clica em "Começar novo ano" e escolhe se limpa as categorias (montar do zero) ou mantém para editar. Também dá para limpar pelo botão "Limpar categorias".
 8. Votantes veem os resultados pelo link no início; ano com votação em andamento, encerrada ou não publicada fica bloqueado para eles.
 

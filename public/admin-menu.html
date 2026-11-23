@@ -112,6 +112,8 @@
   .ed-ggc{display:flex;flex-direction:column;gap:10px;padding:12px 14px;border-radius:12px;background:#FFF4D6;color:#5A3D00;font-size:14px;line-height:1.45}
   .ed-ggc.ok{background:#E6F4EA;color:#1E4D2E}
   .ed-ggc[hidden],.form-desempate[hidden]{display:none}
+  .ed-fora{margin:0;padding:12px 14px;border-radius:12px;background:#F4F6F1;color:var(--ink);font-size:14px;line-height:1.45}
+  .ed-fora[hidden]{display:none}
   .form-desempate{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
   .form-desempate select{min-width:200px;width:auto}
   .campo-ano{width:110px;height:46px;padding:0 12px;border:1.5px solid var(--borda);border-radius:10px;font:600 16px Inter,sans-serif;color:var(--ink);background:#FAFBF8}
@@ -283,6 +285,7 @@
                 <button class="btn btn-ok btn-ed" type="submit">Definir vencedor</button>
               </form>
             </div>
+            <p class="ed-fora" id="ed-fora" hidden></p>
             <div class="ed-acoes">
               <form class="form-ano" id="form-ano" novalidate>
                 <label class="sr" for="campo-ano">Ano da edição</label>
@@ -483,6 +486,17 @@ function renderGgc(g) {
   }
   aplicarTravaAno();
 }
+// Fechada/aberta: quem não concorre no GGC Of The Year deste ano (admin + vencedores dos 3 anos anteriores)
+function renderFora(g) {
+  const fora = (g && g.fora) || [];
+  $('ed-fora').hidden = !fora.length;
+  if (!fora.length) return;
+  const motivo = (p) => [p.admin ? 'admin' : '', p.venceu_em ? `venceu em ${p.venceu_em}` : ''].filter(Boolean).join(', ');
+  $('ed-fora').innerHTML = `<strong>Fora do GGC Of The Year de ${g.ano}:</strong> ` +
+    fora.map((p) => `${esc(nomeCurto(p))} (${motivo(p)})`).join(', ') +
+    '. Quem vence só volta a concorrer 4 anos depois.';
+}
+
 // empate sem desempate trava o "Publicar resultados" (o banco também recusa)
 function aplicarTravaAno() {
   $('btn-publicar').disabled = estado.ocupado || estado.travaAno;
@@ -493,7 +507,10 @@ async function recarregar() {
   try {
     const r = await api.resumo();
     render(r);
-    renderGgc(r.eleicao.status === 'encerrada' ? await api.situacaoGgc() : null);
+    const st = r.eleicao.status;
+    const g = st === 'publicada' ? null : await api.situacaoGgc();
+    renderGgc(st === 'encerrada' ? g : null);
+    renderFora(st === 'fechada' || st === 'aberta' ? g : null);
   } catch (e) { console.error(e); avisar('Não deu para carregar o resumo.', true); }
 }
 
