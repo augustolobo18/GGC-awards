@@ -192,7 +192,6 @@
   .u-cat{display:flex;flex-direction:column;gap:4px;min-width:0}
   .u-seu{font-size:11px;font-weight:700}
   .u-titulo{font-size:18px;font-weight:700;line-height:1.15;text-transform:uppercase}
-  .u-desc{font-size:11px;color:#3E423A}
   .u-foto-box{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px}
   .u-foto{width:68px;height:85px;border:1px solid #111;display:flex;align-items:center;justify-content:center;
     font-size:24px;font-weight:700;color:#fff;object-fit:cover}
@@ -207,7 +206,6 @@
   .u-aviso{font-size:13px;font-weight:700;text-align:center;align-self:center;max-width:90%}
   .u-instrucoes{border-top:1.5px solid #111;margin:0 3%;padding:6px 2% 10px;font-size:11px;line-height:1.5}
   .u-instrucoes div+div{padding-left:14px}
-  .u-prog{position:absolute;right:8px;bottom:4px;font-size:9px;color:#3E423A}
 
   @media (max-width:560px){
     .pagina{padding:24px 16px 48px}
@@ -382,12 +380,6 @@ const api = {
     if (error) throw error;
     return data.status;
   },
-  // categorias na ordem em que o votante passa por elas na urna (a principal fica por último)
-  async categorias() {
-    const { data, error } = await sb.from('categorias').select('titulo, descricao, principal, ordem').order('ordem');
-    if (error) throw error;
-    return (data || []).slice().sort((a, b) => (a.principal - b.principal) || (a.ordem - b.ordem));
-  },
   async listar() {
     const { data, error } = await sb.from('contas').select(COLUNAS).order('criado_em');
     if (error) throw error;
@@ -436,7 +428,6 @@ const estado = {
   souDev: false,
   status: 'fechada',
   contas: [],
-  categorias: [],  // só para a prévia da urna no formulário
   busca: '',
   filtro: 'todas',
   form: null,     // { modo, id, ativo, email, nome, apelido, numero, role, roleOriginal, foto_url, fotoArquivo, fotoPrevia, dev, trava }
@@ -693,7 +684,6 @@ function renderForm() {
 
 // Tela da urna como o votante vê depois de digitar o número desta pessoa (espelha renderTela da urna).
 function renderTelaPrevia(f) {
-  const cat = estado.categorias[0] || { titulo: 'Categoria', descricao: '' };
   const d = f.numero;
   const completo = d.length === 2;
   const nome = f.nome.trim() || 'Nome do participante';
@@ -721,16 +711,14 @@ function renderTelaPrevia(f) {
       <div class="u-topo">
         <div class="u-cat">
           <span class="u-seu">SEU VOTO PARA</span>
-          <span class="u-titulo">${esc(cat.titulo)}</span>
-          <span class="u-desc">${esc(cat.descricao)}</span>
+          <span class="u-titulo">MEMBRO MAIS --</span>
         </div>
         ${foto}
       </div>
       <div class="u-num">Número: <div class="u-caixas">${caixa(0)}${caixa(1)}</div></div>
       <div class="u-meio">${meio}</div>
     </div>
-    ${instrucoes}
-    <span class="u-prog">1 de ${Math.max(estado.categorias.length, 1)}</span>`;
+    ${instrucoes}`;
 }
 
 function escolherFoto(input) {
@@ -896,12 +884,7 @@ document.addEventListener('keydown', (e) => {
     console.error(e);
     avisar('Não deu para carregar os participantes.', { erro: true });
   }
-  render();
-  // só alimenta a prévia da urna; se falhar, a prévia usa "Categoria"
-  api.categorias()
-    .then((cats) => { estado.categorias = cats; if (estado.form) renderForm(); })
-    .catch((e) => console.warn('Prévia da urna sem categorias:', e.message));
-})();
+  render();})();
 </script>
 </body>
 </html>
