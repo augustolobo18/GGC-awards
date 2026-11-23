@@ -170,6 +170,11 @@
   .bloqueio .btn-b.leve{background:transparent;color:var(--muted);border:1.5px solid #B9BEB4}
   .bloqueio .btn-b:focus-visible{outline:3px solid #1F5FBF;outline-offset:2px}
   .bloqueio[hidden],.colunas[hidden],.topo p[hidden]{display:none}
+  /* urna de teste (só dev): nada é gravado */
+  .selo-teste{display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:6px 12px;border-radius:999px;
+    background:#FFF4D6;border:1.5px solid #E8C766;color:#6B4E00;font-size:13px;font-weight:700}
+  .selo-teste[hidden]{display:none}
+  .novo.leve{background:transparent;color:var(--muted);border:1.5px solid #B9BEB4}
 </style>
 </head>
 <body>
@@ -178,7 +183,8 @@
     <header class="topo">
       <div>
         <span class="sobre" id="sobre">GGC Awards</span>
-        <h1>Hora de votar</h1>
+        <h1 id="titulo">Hora de votar</h1>
+        <span class="selo-teste" id="selo-teste" hidden>MODO TESTE · nenhum voto é gravado</span>
       </div>
       <p id="instrucao">Digite os dois números do candidato no teclado da urna (ou toque no nome na lista) e aperte CONFIRMA. Dá pra usar o teclado do computador também.</p>
     </header>
@@ -241,6 +247,10 @@ const SOM_LIGADO = true;
 const MENSAGENS_SEM_RETRY = ['já votou', 'não está aberta'];
 
 let SESSAO = null;
+// Urna de teste (só dev, com a urna bloqueada): usa os candidatos e categorias já lidos,
+// mas o FIM é simulado e votar() nunca é chamado.
+let TESTE = false;
+let DADOS = null;
 
 async function carregarDados() {
   const [el, votou, cands, cats] = await Promise.all([
@@ -429,6 +439,13 @@ async function enviar() {
   estado.envio = 'enviando';
   estado.erroEnvio = '';
   render();
+  if (TESTE) {   // simulação: não toca no banco
+    await new Promise((r) => setTimeout(r, 600));
+    estado.envio = 'ok';
+    tocarFim();
+    render();
+    return;
+  }
   try {
     await enviarVotos(estado.votos.slice());
     estado.envio = 'ok';
@@ -462,20 +479,44 @@ function mostrarBloqueio(tipo) {
   $('bloqueio-icone').innerHTML = b.icone;
   $('bloqueio-titulo').textContent = b.titulo;
   $('bloqueio-texto').textContent = b.texto;
+  const dev = SESSAO.conta.role === 'dev' && DADOS && DADOS.categorias.length;
   $('bloqueio-acoes').innerHTML =
-    (admin ? `<a class="btn-b forte" href="admin-menu.html">Voltar ao menu</a>` : '') +
+    (dev ? `<button type="button" class="btn-b forte" id="bloqueio-teste">Abrir urna de teste</button>` : '') +
+    (admin ? `<a class="btn-b ${dev ? 'leve' : 'forte'}" href="admin-menu.html">Voltar ao menu</a>` : '') +
     `<button type="button" class="btn-b leve" id="bloqueio-sair">Sair</button>`;
   $('bloqueio-sair').addEventListener('click', () => GGC.sair());
+  if (dev) $('bloqueio-teste').addEventListener('click', abrirUrnaTeste);
   $('instrucao').hidden = true;
   document.querySelector('.colunas').hidden = true;
   $('bloqueio').hidden = false;
+}
+
+function reiniciarTeste() {
+  Object.assign(estado, { etapa: 0, digitos: '', fim: false, envio: 'parado', erroEnvio: '', semRetry: false, votos: [], busca: '' });
+  $('busca').value = '';
+  render();
+  $('urna').focus();
+}
+
+function abrirUrnaTeste() {
+  TESTE = true;
+  estado.candidatos = DADOS.candidatos;
+  estado.categorias = DADOS.categorias;
+  estado.carregando = false;
+  $('titulo').textContent = 'Urna de teste';
+  $('selo-teste').hidden = false;
+  document.title = 'Urna de teste — GGC Awards';
+  $('bloqueio').hidden = true;
+  $('instrucao').hidden = false;
+  document.querySelector('.colunas').hidden = false;
+  reiniciarTeste();
 }
 
 // enquanto estiver bloqueada por "não abriu", libera sozinha quando o admin abrir
 function esperarAbertura() {
   sb.channel('urna-status')
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'eleicao' }, (p) => {
-      if (p.new && p.new.status === 'aberta') location.reload();
+      if (p.new && p.new.status === 'aberta' && !TESTE) location.reload();   // não derruba a urna de teste
     })
     .subscribe();
 }
@@ -601,7 +642,10 @@ function renderPassos() {
     return `<span class="passo ${classe}">${check}${esc(c.titulo)}</span>`;
   }).join('');
   let botao = '';
-  if (estado.fim && estado.envio === 'ok') botao = `<button type="button" class="novo" id="voltar">Voltar ao início</button>`;
+  if (TESTE && estado.fim && estado.envio === 'ok') {
+    botao = `<button type="button" class="novo" id="reiniciar-teste">Testar de novo</button>`
+      + `<button type="button" class="novo leve" id="voltar" style="margin-left:0">Sair da urna</button>`;
+  } else if (estado.fim && estado.envio === 'ok') botao = `<button type="button" class="novo" id="voltar">Voltar ao início</button>`;
   else if (estado.fim && estado.envio === 'erro') {
     botao = estado.semRetry
       ? `<button type="button" class="novo" id="voltar">Voltar ao início</button>`
@@ -635,6 +679,7 @@ document.addEventListener('click', (e) => {
   else if (t.dataset.numero) escolher(t.dataset.numero);
   else if (t.id === 'voltar') voltarAoInicio();
   else if (t.id === 'tentar') enviar();
+  else if (t.id === 'reiniciar-teste') reiniciarTeste();
 });
 
 $('urna').addEventListener('keydown', (e) => {
@@ -655,6 +700,7 @@ $('busca').addEventListener('input', (e) => {
   render();
   try {
     const d = await carregarDados();
+    DADOS = d;
     $('sobre').textContent = `GGC Awards ${d.eleicao.ano}`;
     document.title = `Urna — GGC Awards ${d.eleicao.ano}`;
     // votação fechada/encerrada ou voto já registrado: mostra a tela de urna fora do ar
