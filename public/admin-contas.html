@@ -174,6 +174,41 @@
   .seg:disabled{cursor:not-allowed;color:#9AA094}
   #bloco-foto-ajuda{margin:0}
 
+  /* modal de participante: formulário à esquerda, prévia da urna à direita */
+  .modal.largo{max-width:1040px}
+  .modal-colunas{display:flex;flex-wrap:wrap}
+  .modal-colunas .modal-corpo{flex:1 1 420px;min-width:0}
+  .lado-urna{flex:1 1 400px;min-width:0;padding:20px 24px;background:#F6F7F4;border-left:1px solid var(--line)}
+  .lado-urna-fixo{position:sticky;top:0;display:flex;flex-direction:column;gap:12px}
+  @media (max-width:900px){.lado-urna{border-left:0;border-top:1px solid var(--line)}}
+
+  /* prévia da tela da urna (mesmo visual de urna-eletronica.html, em escala menor) */
+  .u-urna{background:#D8D3C6;border-radius:16px;padding:12px;box-shadow:inset 0 2px 0 rgba(255,255,255,.6),inset 0 -3px 0 rgba(0,0,0,.08)}
+  .u-moldura{background:#2B2D29;border-radius:10px;padding:8px;box-shadow:inset 0 3px 8px rgba(0,0,0,.45)}
+  .u-tela{position:relative;aspect-ratio:4/3;background:#EEF0E8;border-radius:4px;overflow:hidden;
+    font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;color:#111;display:flex;flex-direction:column}
+  .u-corpo{flex:1;display:flex;flex-direction:column;padding:4% 5% 0;min-height:0}
+  .u-topo{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+  .u-cat{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .u-seu{font-size:11px;font-weight:700}
+  .u-titulo{font-size:18px;font-weight:700;line-height:1.15;text-transform:uppercase}
+  .u-desc{font-size:11px;color:#3E423A}
+  .u-foto-box{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px}
+  .u-foto{width:68px;height:85px;border:1px solid #111;display:flex;align-items:center;justify-content:center;
+    font-size:24px;font-weight:700;color:#fff;object-fit:cover}
+  img.u-foto{background:#fff}
+  .u-num{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:14px}
+  .u-caixas{display:flex;gap:5px}
+  .u-caixa{width:30px;height:40px;display:inline-flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;border:2px solid #111}
+  .u-caixa.atual{animation:cursor .9s steps(1) infinite;background:#F7F8F3}
+  .u-meio{flex:1;display:flex;flex-direction:column;justify-content:center;gap:6px;min-height:0}
+  .u-dados{display:flex;flex-direction:column;gap:6px;font-size:14px}
+  .u-dados strong{text-transform:uppercase}
+  .u-aviso{font-size:13px;font-weight:700;text-align:center;align-self:center;max-width:90%}
+  .u-instrucoes{border-top:1.5px solid #111;margin:0 3%;padding:6px 2% 10px;font-size:11px;line-height:1.5}
+  .u-instrucoes div+div{padding-left:14px}
+  .u-prog{position:absolute;right:8px;bottom:4px;font-size:9px;color:#3E423A}
+
   @media (max-width:560px){
     .pagina{padding:24px 16px 48px}
     h1{font-size:30px}
@@ -225,7 +260,7 @@
 
 <!-- MODAL: criar / editar participante -->
 <div class="fundo-modal" id="modal-form" hidden>
-  <form class="modal" id="form" role="dialog" aria-modal="true" aria-labelledby="titulo-form" novalidate>
+  <form class="modal largo" id="form" role="dialog" aria-modal="true" aria-labelledby="titulo-form" novalidate>
     <div class="modal-topo">
       <h2 id="titulo-form">Novo participante</h2>
       <button class="icone" type="button" data-fechar aria-label="Fechar">
@@ -233,6 +268,7 @@
       </button>
     </div>
 
+    <div class="modal-colunas">
     <div class="modal-corpo">
       <label class="grupo">E-mail
         <input class="campo" id="campo-email" type="email" autocomplete="off" placeholder="bia@email.com" aria-describedby="ajuda-email">
@@ -285,12 +321,19 @@
         </div>
         <span class="ajuda" id="descricao-papel"></span>
       </div>
+    </div>
 
-      <div class="grupo">
-        <span class="previa-titulo">Como aparece na urna</span>
+    <aside class="lado-urna" aria-label="Prévia na urna">
+      <div class="lado-urna-fixo">
+        <span class="previa-titulo">Prévia: votando nele na urna</span>
+        <div class="u-urna" aria-hidden="true">
+          <div class="u-moldura"><div class="u-tela" id="tela-previa"></div></div>
+        </div>
+        <span class="previa-titulo" style="margin-top:6px">Na lista de candidatos</span>
         <div class="previa" id="previa"></div>
         <span class="ajuda" id="ajuda-previa"></span>
       </div>
+    </aside>
     </div>
 
     <div class="modal-rodape">
@@ -338,6 +381,12 @@ const api = {
     const { data, error } = await sb.from('eleicao').select('status').eq('id', 1).single();
     if (error) throw error;
     return data.status;
+  },
+  // categorias na ordem em que o votante passa por elas na urna (a principal fica por último)
+  async categorias() {
+    const { data, error } = await sb.from('categorias').select('titulo, descricao, principal, ordem').order('ordem');
+    if (error) throw error;
+    return (data || []).slice().sort((a, b) => (a.principal - b.principal) || (a.ordem - b.ordem));
   },
   async listar() {
     const { data, error } = await sb.from('contas').select(COLUNAS).order('criado_em');
@@ -387,6 +436,7 @@ const estado = {
   souDev: false,
   status: 'fechada',
   contas: [],
+  categorias: [],  // só para a prévia da urna no formulário
   busca: '',
   filtro: 'todas',
   form: null,     // { modo, id, ativo, email, nome, apelido, numero, role, roleOriginal, foto_url, fotoArquivo, fotoPrevia, dev, trava }
@@ -638,6 +688,49 @@ function renderForm() {
     <span class="nome-txt"><b>${esc(f.nome.trim() || 'Nome do participante')}</b><span>${esc(f.apelido.trim() || 'Apelido')}</span></span>
     <span class="num">${esc(f.numero ? f.numero.padEnd(2, '–') : '–')}</span>`;
   $('ajuda-previa').textContent = f.numero ? '' : 'Sem número: não aparece na lista da urna.';
+  renderTelaPrevia(f);
+}
+
+// Tela da urna como o votante vê depois de digitar o número desta pessoa (espelha renderTela da urna).
+function renderTelaPrevia(f) {
+  const cat = estado.categorias[0] || { titulo: 'Categoria', descricao: '' };
+  const d = f.numero;
+  const completo = d.length === 2;
+  const nome = f.nome.trim() || 'Nome do participante';
+  const caixa = (i) => `<span class="u-caixa${d.length === i ? ' atual' : ''}">${esc(d[i] || '')}</span>`;
+
+  const foto = completo
+    ? `<div class="u-foto-box">${avatarModal(f.fotoPrevia, f.nome || f.email, d, 'u-foto')}<span>Candidato</span></div>`
+    : '';
+  const meio = completo
+    ? `<div class="u-dados">
+        <div>Nome: <strong>${esc(nome)}</strong></div>
+        <div>Apelido: <strong>${esc(f.apelido.trim())}</strong></div>
+      </div>`
+    : `<span class="u-aviso">${d ? 'Complete os 2 dígitos do número para ver a tela do voto.' : 'Sem número: não dá para votar nesta pessoa.'}</span>`;
+  const instrucoes = completo
+    ? `<div class="u-instrucoes">
+        <div>Aperte a tecla:</div>
+        <div><strong>CONFIRMA</strong> para <strong>CONFIRMAR</strong> este voto</div>
+        <div><strong>CORRIGE</strong> para <strong>REINICIAR</strong> este voto</div>
+      </div>`
+    : `<div style="height:10px"></div>`;
+
+  $('tela-previa').innerHTML = `
+    <div class="u-corpo">
+      <div class="u-topo">
+        <div class="u-cat">
+          <span class="u-seu">SEU VOTO PARA</span>
+          <span class="u-titulo">${esc(cat.titulo)}</span>
+          <span class="u-desc">${esc(cat.descricao)}</span>
+        </div>
+        ${foto}
+      </div>
+      <div class="u-num">Número: <div class="u-caixas">${caixa(0)}${caixa(1)}</div></div>
+      <div class="u-meio">${meio}</div>
+    </div>
+    ${instrucoes}
+    <span class="u-prog">1 de ${Math.max(estado.categorias.length, 1)}</span>`;
 }
 
 function escolherFoto(input) {
@@ -804,6 +897,10 @@ document.addEventListener('keydown', (e) => {
     avisar('Não deu para carregar os participantes.', { erro: true });
   }
   render();
+  // só alimenta a prévia da urna; se falhar, a prévia usa "Categoria"
+  api.categorias()
+    .then((cats) => { estado.categorias = cats; if (estado.form) renderForm(); })
+    .catch((e) => console.warn('Prévia da urna sem categorias:', e.message));
 })();
 </script>
 </body>
