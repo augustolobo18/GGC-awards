@@ -260,10 +260,11 @@ $('form').addEventListener('submit', async (e) => {
     if (modo === 'criar') {
       const { data, error } = await sb.auth.signUp({ email, password: senha });
       if (error) throw error;
+      // "Confirm email" fica desligado no Supabase: o cadastro já devolve a sessão.
+      // Se por algum motivo não vier, entra com a senha que a pessoa acabou de criar.
       if (!data.session) {
-        mostrarErro('Conta criada. Confirme pelo link que enviamos no seu e-mail e depois entre.', true);
-        setCarregando(false);
-        return;
+        const r = await sb.auth.signInWithPassword({ email, password: senha });
+        if (r.error) throw r.error;
       }
     } else {
       const { error } = await sb.auth.signInWithPassword({ email, password: senha });

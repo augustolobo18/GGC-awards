@@ -98,7 +98,8 @@
     .fundo{justify-content:flex-start;padding:76px 14px calc(110px + env(safe-area-inset-bottom))}
     .vidro{padding:28px 20px 24px;border-radius:26px;gap:18px}
     .ano{font-size:26px;margin-top:8px}
-    .infos li{padding:10px 6px}
+    .infos li{padding:10px 4px}
+    .infos span{font-size:12px}
     .infos b{font-size:26px}
     h1{font-size:54px}
     .btn-votar{font-size:22px}
@@ -136,7 +137,7 @@
 
     <ul class="infos" id="infos" hidden>
       <li><b id="qtd-categorias">–</b><span>categorias</span></li>
-      <li><b id="qtd-candidatos">–</b><span>candidatos</span></li>
+      <li><b id="qtd-participantes">–</b><span>participantes</span></li>
       <li><b id="qtd-minutos">–</b><span>minutos</span></li>
     </ul>
 
@@ -183,14 +184,14 @@ const URL_URNA = 'boas-vindas.html';   // boas-vindas do admin; sem texto, ela s
 const MODO_TESTE = !window.sb;
 
 const api = MODO_TESTE ? {
-  async usuario() { return { nome: 'Ana Beatriz Lima', apelido: 'Bia' }; },
+  async usuario() { return { nome: 'Ana Beatriz Lima', apelido: 'Bia', numero: '10' }; },
   async eleicao() {
     const p = new URLSearchParams(location.search).get('estado');
     return { ano: 2026, status: ['fechada', 'aberta', 'encerrada', 'publicada'].includes(p) ? p : 'fechada' };
   },
   async jaVotou() { return new URLSearchParams(location.search).get('estado') === 'votou'; },
   async temResultados() { return false; },
-  async resumo() { return { categorias: 7, candidatos: 18 }; },
+  async resumo() { return { categorias: 7, candidatos: 17 }; },
   observar() {},
   async sair() {},
 } : {
@@ -325,7 +326,8 @@ async function atualizarEstado() {
   try {
     const [, resumo] = await Promise.all([atualizarEstado(), api.resumo()]);
     $('qtd-categorias').textContent = resumo.categorias;
-    $('qtd-candidatos').textContent = resumo.candidatos;
+    // a lista da urna não inclui a própria pessoa; somando ela, dá o total de participantes
+    $('qtd-participantes').textContent = resumo.candidatos + (usuario.numero ? 1 : 0);
     $('qtd-minutos').textContent = '~' + Math.max(1, Math.round(resumo.categorias * 0.4));
   } catch (err) {
     console.error(err);
