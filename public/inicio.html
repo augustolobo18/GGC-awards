@@ -189,7 +189,6 @@ const api = MODO_TESTE ? {
     return { ano: 2026, status: ['fechada', 'aberta', 'encerrada', 'publicada'].includes(p) ? p : 'fechada' };
   },
   async jaVotou() { return new URLSearchParams(location.search).get('estado') === 'votou'; },
-  async temResultados() { return false; },
   async resumo() { return { categorias: 7, candidatos: 17 }; },
   observar() {},
   async sair() {},
@@ -203,12 +202,6 @@ const api = MODO_TESTE ? {
     const { data, error } = await sb.rpc('ja_votei');
     if (error) throw error;
     return !!data;
-  },
-  // votantes só enxergam (RLS) edições com resultado publicado
-  async temResultados() {
-    const { count, error } = await sb.from('edicoes').select('ano', { count: 'exact', head: true });
-    if (error) throw error;
-    return (count || 0) > 0;
   },
   async resumo() {
     const [c, k] = await Promise.all([
@@ -267,7 +260,7 @@ const ESTADOS = {
   },
 };
 
-const estado = { status: 'fechada', votou: false, ano: null, temResultados: false };
+const estado = { status: 'fechada', votou: false, ano: null };
 const $ = (id) => document.getElementById(id);
 
 function render() {
@@ -291,7 +284,6 @@ function render() {
   $('btn-bloqueado').hidden = aberta || publicada;
   // sempre dá para entrar nos resultados; sem nada publicado, a tela avisa
   $('link-resultados').hidden = publicada;
-  $('link-resultados').textContent = estado.temResultados ? 'Ver resultados de anos anteriores' : 'Ver resultados';
   $('btn-bloqueado').dataset.icone = e.icone || '';
   $('rotulo-bloqueado').textContent = e.rotulo || '';
 
@@ -302,8 +294,8 @@ function render() {
 $('btn-sair').addEventListener('click', async () => { await api.sair(); location.href = 'login.html'; });
 
 async function atualizarEstado() {
-  const [el, votou, temResultados] = await Promise.all([api.eleicao(), api.jaVotou(), api.temResultados()]);
-  Object.assign(estado, { status: el.status, ano: el.ano, votou, temResultados });
+  const [el, votou] = await Promise.all([api.eleicao(), api.jaVotou()]);
+  Object.assign(estado, { status: el.status, ano: el.ano, votou });
 }
 
 (async function iniciar() {
