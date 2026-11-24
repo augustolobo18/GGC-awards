@@ -92,6 +92,7 @@
   .btn-votar:focus-visible,.sair:focus-visible{outline:3px solid #fff;outline-offset:3px}
 
   .dica{margin:0;font-size:14px;font-weight:600;line-height:1.5;color:rgba(255,255,255,.95)}
+  .dica:empty{display:none}
 
   @media (max-width:420px){
     /* celular: card mais compacto e folga embaixo pra barra flutuante do Safari não cobrir o botão */
@@ -232,7 +233,7 @@ const ESTADOS = {
     selo: 'Votação fechada',
     mensagem: '',   // o botão travado já diz tudo
     rotulo: 'Votação ainda não abriu',
-    dica: 'Não precisa recarregar: a página atualiza sozinha.',
+    dica: '',
     icone: 'cadeado',
     infos: true,
   },
