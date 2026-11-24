@@ -72,7 +72,7 @@
   .mensagem{margin:0;max-width:360px;font-size:17px;line-height:1.5;font-weight:600}
   .mensagem:empty,.selo[hidden]{display:none}
 
-  .infos{margin:0;padding:0;list-style:none;width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .infos{margin:0;padding:0;list-style:none;width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .infos[hidden]{display:none}
   .infos li{padding:14px 8px;border-radius:16px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);display:flex;flex-direction:column;align-items:center;gap:2px}
   .infos b{font-family:'Lilita One',Nunito,sans-serif;font-weight:400;font-size:30px;line-height:1;color:var(--amarelo)}
@@ -98,8 +98,7 @@
     .fundo{justify-content:flex-start;padding:76px 14px calc(110px + env(safe-area-inset-bottom))}
     .vidro{padding:28px 20px 24px;border-radius:26px;gap:18px}
     .ano{font-size:26px;margin-top:8px}
-    .infos li{padding:10px 4px}
-    .infos span{font-size:12px}
+    .infos li{padding:10px 6px}
     .infos b{font-size:26px}
     h1{font-size:54px}
     .btn-votar{font-size:22px}
@@ -138,7 +137,6 @@
     <ul class="infos" id="infos" hidden>
       <li><b id="qtd-categorias">–</b><span>categorias</span></li>
       <li><b id="qtd-participantes">–</b><span>participantes</span></li>
-      <li><b id="qtd-minutos">–</b><span>minutos</span></li>
     </ul>
 
     <a class="acao btn-votar" id="btn-ver-resultados" href="admin-apuracao.html" hidden>
@@ -328,7 +326,6 @@ async function atualizarEstado() {
     $('qtd-categorias').textContent = resumo.categorias;
     // a lista da urna não inclui a própria pessoa; somando ela, dá o total de participantes
     $('qtd-participantes').textContent = resumo.candidatos + (usuario.numero ? 1 : 0);
-    $('qtd-minutos').textContent = '~' + Math.max(1, Math.round(resumo.categorias * 0.4));
   } catch (err) {
     console.error(err);
     $('dica').textContent = 'Não deu para carregar. Recarregue a página.';
