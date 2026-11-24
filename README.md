@@ -40,13 +40,15 @@ O SQL não configura o Auth. Faça uma vez:
 
 ## Rodar local
 
-Sem build. Sirva a pasta `public/`:
+Sem build. Sirva a pasta `public/` com o servidor local do repo (Node, sem dependências):
 
 ```bash
-npx serve public
+node serve-local.js
 ```
 
-Abra `http://localhost:3000`. O `index.html` redireciona conforme a sessão: sem login vai para `login.html`, votante para `inicio.html`, admin/dev para `admin-menu.html`.
+Abra `http://localhost:3000`. O servidor escuta só em `127.0.0.1` (nenhuma outra máquina da rede acessa), aceita só GET/HEAD e não sai de `public/`. Não use `npx serve`: ele baixa pacotes do npm a cada execução e por padrão abre a porta para a rede toda.
+
+O `supabase-js` vem do jsDelivr com versão fixa e hash de integridade (`integrity="sha384-..."`): se o arquivo do CDN for alterado, o navegador recusa. Ao trocar de versão, atualize o hash em todas as páginas. O `index.html` redireciona conforme a sessão: sem login vai para `login.html`, votante para `inicio.html`, admin/dev para `admin-menu.html`.
 
 `public/js/config.js` tem a URL e a *publishable key* do projeto. Ela é pública por design (quem protege os dados é o RLS). **A service role key nunca entra no repositório.**
 
