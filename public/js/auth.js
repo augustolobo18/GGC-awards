@@ -68,7 +68,9 @@
     return padrao;
   }
 
-  // Avatar do usuário no topo: foto se tiver, senão a inicial (se a foto falhar, volta pra inicial)
+  // Avatar do usuário no topo: foto se tiver, senão a inicial (se a foto falhar, volta pra inicial).
+  // Com foto, o círculo passa a ter fundo --avatar-fundo (padrão branco), pra parte transparente
+  // de foto sem fundo não aparecer escura.
   function preencherAvatar(el, conta, letra) {
     const inicial = (letra || '?').toUpperCase();
     el.textContent = inicial;
@@ -76,7 +78,7 @@
     const img = new Image();
     img.alt = '';
     img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;display:block';
-    img.onload = () => { el.textContent = ''; el.appendChild(img); };
+    img.onload = () => { el.textContent = ''; el.style.background = 'var(--avatar-fundo, #fff)'; el.appendChild(img); };
     img.src = conta.foto_url;
   }
 
