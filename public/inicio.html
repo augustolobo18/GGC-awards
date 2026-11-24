@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Início — GGC Awards</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;600;700;800;900&display=swap" rel="stylesheet">
@@ -20,7 +20,7 @@
   body{margin:0;background:var(--azul);font-family:Nunito,system-ui,sans-serif;color:#fff}
   a{color:#FFD23F}
 
-  .fundo{position:relative;min-height:100vh;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:88px 16px 48px}
+  .fundo{position:relative;min-height:100vh;min-height:100svh;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:88px 16px calc(48px + env(safe-area-inset-bottom))}
   .agua{position:absolute;inset:0;background-color:var(--azul);
     background-image:radial-gradient(circle at 20% 20%,rgba(94,214,255,.55) 0,transparent 45%),
                      radial-gradient(circle at 80% 85%,rgba(31,168,232,.7) 0,transparent 50%);
@@ -70,6 +70,7 @@
   .ano{display:block;margin-top:12px;font-family:'Lilita One',Nunito,sans-serif;font-size:30px;letter-spacing:.12em;color:#fff;text-shadow:0 3px 0 var(--marinho)}
   .ano:empty{display:none}
   .mensagem{margin:0;max-width:360px;font-size:17px;line-height:1.5;font-weight:600}
+  .mensagem:empty,.selo[hidden]{display:none}
 
   .infos{margin:0;padding:0;list-style:none;width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   .infos[hidden]{display:none}
@@ -93,7 +94,12 @@
   .dica{margin:0;font-size:14px;font-weight:600;line-height:1.5;color:rgba(255,255,255,.95)}
 
   @media (max-width:420px){
-    .vidro{padding:34px 22px 26px;border-radius:26px}
+    /* celular: card mais compacto e folga embaixo pra barra flutuante do Safari não cobrir o botão */
+    .fundo{justify-content:flex-start;padding:76px 14px calc(110px + env(safe-area-inset-bottom))}
+    .vidro{padding:28px 20px 24px;border-radius:26px;gap:18px}
+    .ano{font-size:26px;margin-top:8px}
+    .infos li{padding:10px 6px}
+    .infos b{font-size:26px}
     h1{font-size:54px}
     .btn-votar{font-size:22px}
     .btn-bloqueado{font-size:19px}
@@ -225,7 +231,7 @@ const api = MODO_TESTE ? {
 const ESTADOS = {
   fechada: {
     selo: 'Votação fechada',
-    mensagem: 'A urna ainda está lacrada. Assim que o admin abrir a votação, o botão libera aqui.',
+    mensagem: '',   // o botão travado já diz tudo
     rotulo: 'Votação ainda não abriu',
     dica: 'Não precisa recarregar: a página atualiza sozinha.',
     icone: 'cadeado',
@@ -274,6 +280,8 @@ function render() {
 
   $('selo').className = `selo ${chave}`;
   $('selo').textContent = e.selo;
+  // com o botão travado, o rótulo dele já diz o mesmo que o selo: some com o selo pra economizar espaço
+  $('selo').hidden = !!e.rotulo;
   $('mensagem').textContent = e.mensagem;
   $('infos').hidden = !e.infos;
   $('dica').textContent = e.dica;
