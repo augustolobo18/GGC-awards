@@ -92,9 +92,13 @@
   .passo{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1.5px solid #B9BEB4;border-radius:999px;font-size:13px;font-weight:600;color:var(--muted)}
   .passo.feito{background:#1E3A2B;color:#fff;border-color:#1E3A2B}
   .passo.atual{background:#fff;color:#111;border-color:#111}
-  .novo{margin-left:auto;min-height:44px;padding:0 18px;border:0;border-radius:999px;background:var(--ink);color:#fff;font:600 14px Inter,sans-serif;cursor:pointer}
+  /* botões da urna (sair / testar de novo / voltar) numa linha própria, separados das etiquetas das categorias */
+  .botoes-urna{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px}
+  .botoes-urna:empty{display:none}
+  .novo{min-height:46px;padding:0 22px;border:0;border-radius:12px;background:var(--ink);color:#fff;font:700 15px Inter,sans-serif;cursor:pointer}
   .novo:disabled{opacity:.6;cursor:wait}
-  .novo.sair-urna{background:transparent;color:var(--muted);border:1.5px solid #B9BEB4}
+  .novo:focus-visible{outline:3px solid #1F5FBF;outline-offset:2px}
+  .novo.sair-urna,.novo.leve{background:#fff;color:var(--ink);border:2px solid var(--ink)}
 
   /* lista */
   /* no computador a altura do cartão = altura da urna (JS: ajustarLista); a lista rola só por dentro */
@@ -196,7 +200,6 @@
   .selo-teste{display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:6px 12px;border-radius:999px;
     background:#FFF4D6;border:1.5px solid #E8C766;color:#6B4E00;font-size:13px;font-weight:700}
   .selo-teste[hidden]{display:none}
-  .novo.leve{background:transparent;color:var(--muted);border:1.5px solid #B9BEB4}
 </style>
 </head>
 <body>
@@ -235,6 +238,7 @@
             </div>
           </div>
         </div>
+        <div class="botoes-urna" id="botoes-urna"></div>
         <nav class="passos" id="passos" aria-label="Categorias"></nav>
       </section>
 
@@ -682,7 +686,7 @@ function renderPassos() {
   let botao = '';
   if (TESTE && estado.fim && estado.envio === 'ok') {
     botao = `<button type="button" class="novo" id="reiniciar-teste">Testar de novo</button>`
-      + `<button type="button" class="novo leve" id="voltar" style="margin-left:0">Sair da urna</button>`;
+      + `<button type="button" class="novo leve" id="voltar">Sair da urna</button>`;
   } else if (estado.fim && estado.envio === 'ok') botao = `<button type="button" class="novo" id="voltar">Voltar ao início</button>`;
   else if (estado.fim && estado.envio === 'erro') {
     botao = estado.semRetry
@@ -690,7 +694,8 @@ function renderPassos() {
       : `<button type="button" class="novo" id="tentar">Tentar de novo</button>`;
   } else if (estado.fim) botao = `<button type="button" class="novo" disabled>Enviando…</button>`;
   else if (!estado.carregando) botao = `<button type="button" class="novo sair-urna" id="voltar">Sair da urna</button>`;
-  $('passos').innerHTML = passos + botao;
+  $('passos').innerHTML = passos;
+  $('botoes-urna').innerHTML = botao;
 }
 
 function render() {
